@@ -3,6 +3,7 @@
 
 #include "argparse.h"
 #include "iotools.h"
+#include "asm_parse.h"
 
 argument_t arg_out = {'o', NULL, true, {NULL}};
 
@@ -34,5 +35,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Ouch, we ran out of memory or something\n");
         exit(-1);
     }
-    printf("%s\n", filetext);
+
+    struct parse_result parsed = asm_parse(filetext);
+    print_parse(&parsed);
 }

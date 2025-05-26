@@ -31,10 +31,4 @@ char* fgets_dup(FILE* stream);
 */
 char* fread_dup(FILE* stream);
 
-/**
- * Finds the end of the line for the current string. Must be given a valid null-
- * terminated string. Recognizes \0 or \n as end-of-line.
-*/
-const char* eol(const char* str);
-
 #endif

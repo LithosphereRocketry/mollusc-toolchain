@@ -1,6 +1,13 @@
 .vscode/
 out/
 
+# preprocessed asm
+*.s
+
+# lex/yacc
+*.yy.c
+*.tab.c
+
 # Prerequisites
 *.d
 
