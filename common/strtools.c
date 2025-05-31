@@ -5,11 +5,13 @@
 #include <stdlib.h>
 
 const char* eol(const char* str) {
-    const char* ptr = str;
-    while(*ptr != '\0' && *ptr != '\n') {
-        ptr++;
-    }
-    return ptr;
+    while(*str != '\0' && *str != '\n') str++;
+    return str;
+}
+
+const char* eow(const char* str) {
+    while(*str != '\0' && !isspace(*str)) str++;
+    return str;
 }
 
 const char* startswith(const char* pattern, const char* str) {

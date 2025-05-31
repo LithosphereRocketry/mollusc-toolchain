@@ -165,3 +165,15 @@ void sm_print(const struct string_map* sm) {
         printf("\n");
     }
 }
+
+
+void sm_foreach(const struct string_map* sm,
+        void (*func)(void*, const char*, void*), void* global) {
+    for(size_t i = 0; i < sm->_entries; i++) {
+        struct string_map_entry* e = sm->table[i];
+        while(e) {
+            func(global, e->key, e->value);
+            e = e->next;
+        }
+    }
+}

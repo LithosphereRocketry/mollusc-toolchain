@@ -6,12 +6,11 @@
 
 struct parse_section {
     const char* name;
-    struct heap_list* externs;
+    struct heap_list globals;
 };
 
 struct parse_result {
-    size_t n_sections;
-    struct parse_section* sections;
+    struct string_map sections;
 };
 
 struct parse_result asm_parse(const char* text);

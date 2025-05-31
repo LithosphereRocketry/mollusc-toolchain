@@ -20,4 +20,6 @@ int main(int argc, char** argv) {
     printf("%p\n", sm_get(&map, "two"));
     printf("%p\n", sm_get(&map, "three"));
     printf("%p\n", sm_get(&map, "four"));
+
+    sm_destroy(&map, false);
 }

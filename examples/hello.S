@@ -1,2 +1,3 @@
 .section text
-    add sp, zero, zero
+.global main
+    ; add sp, zero, zero

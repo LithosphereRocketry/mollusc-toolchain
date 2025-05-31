@@ -10,6 +10,11 @@
 const char* eol(const char* str);
 
 /**
+ * Finds the first space or terminator in the given null-terminated string.
+ */
+const char* eow(const char* str);
+
+/**
  * If str starts with exactly pattern, return a pointer to the first character
  * after pattern in str, otherwise returns null. Must be given valid null-
  * terminated strings.

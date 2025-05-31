@@ -46,4 +46,7 @@ void sm_destroy(struct string_map* sm, bool free_values);
 
 void sm_print(const struct string_map* sm);
 
+void sm_foreach(const struct string_map* sm,
+        void (*func)(void*, const char*, void*), void* global);
+
 #endif
