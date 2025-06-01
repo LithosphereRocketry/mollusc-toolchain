@@ -12,7 +12,6 @@ DIRS = $(OUT_DIR)
 
 TARGET_DIRS = $(wildcard $(TARGET_DIR)/*)
 
-
 getgensrcs = $(patsubst %.lex,%.yy.c,$(wildcard $(1)/*.lex))\
 			 $(patsubst %.yacc,%.tab.c,$(wildcard $(1)/*.yacc))
 getsrcs = $(wildcard $(1)/*.c) $(call getgensrcs,$(1))
@@ -24,7 +23,6 @@ OBJS = $(call getobjs,$(COMMON_DIR)) $(foreach t,$(TARGET_DIRS),$(call getobjs,$
 DEPS = $(OBJS:.o=.d)
 
 TARGETS = $(TARGET_DIRS:$(TARGET_DIR)/%=$(OUT_DIR)/%)
-$(info $(TARGETS))
 
 ASSEMBLY_EXS = $(wildcard $(EXAMPLE_DIR)/*.S)
 ASSEMBLY_EXS_PREPROCESS = $(ASSEMBLY_EXS:.S=.s)

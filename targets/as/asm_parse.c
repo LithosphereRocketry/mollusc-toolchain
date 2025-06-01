@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 
 #include "strtools.h"
@@ -13,9 +14,9 @@ static bool valid_in_name(char c, size_t pos) {
         || (isdigit(c) && pos != 0);
 }
 
-static void parse_err(const char* msg, const char* text, size_t lineno) {
-    fprintf(stderr, "Unrecognized syntax at line %zu: %s\n%*s",
-                    lineno, msg, (int) (eol(text)-text), text);
+static void parse_err(const char* msg, const char* filename, const char* text, size_t lineno) {
+    fprintf(stderr, "Unrecognized syntax at %s line %zu: %s\n%*s",
+                    filename, lineno, msg, (int) (eol(text)-text), text);
 }
 
 static struct parse_section* add_section(struct parse_result* res, const char* name) {
@@ -42,10 +43,12 @@ static const char* parse_name(const char* text, char** name) {
     return endname;
 }
 
-struct parse_result asm_parse(const char* text) {
+struct parse_result asm_parse(const char* text, const char* filename) {
     struct parse_result result = {
         .sections = sm_make()
     };
+    // mildly hacky to avoid double free
+    char* fn = strcpy_dup(filename);
     size_t lineno = 1;
     const char* nextpos;
     struct parse_section* current_section = NULL;
@@ -54,6 +57,21 @@ struct parse_result asm_parse(const char* text) {
         else if(isspace(*text)) {
             if(*text == '\n') lineno++;
             text++;
+        } else if((nextpos = (startswith("# ", text)))){
+            int nchar;
+            size_t new_lineno;
+            if(sscanf(nextpos, "%lu \"%n", &new_lineno, &nchar) != 1) {
+                parse_err("Note: malformed line number annotation", fn, text, lineno);
+            } else {
+                lineno = new_lineno;
+                nextpos += nchar;
+                const char* endstr = strchr(nextpos, '\"');
+                char* new_filename = strncpy_dup(nextpos, endstr-nextpos);
+                free(fn);
+                fn = new_filename;
+                nextpos = endstr + 1;
+            }
+            text = eol(nextpos) + 1;
         } else if(*text == ';' || *text == '#') {
             // In future it might be nice to parse preprocessor line directives
             // but for now we can just ignore them
@@ -63,27 +81,37 @@ struct parse_result asm_parse(const char* text) {
             const char* end_name = parse_name(nextpos, &name);
             if(!end_name) {
                 parse_err("Unrecognized syntax in section declaration",
-                        text, lineno);
+                        fn, text, lineno);
                 exit(-1);
             }
             current_section = add_section(&result, name);
             text = end_name;
         } else if((nextpos = startswith(".global", text))) {
             if(!current_section) {
-                parse_err("No section active", text, lineno);
+                parse_err("No section active", fn, text, lineno);
                 exit(-1);
             }
             char* name;
             const char* end_name = parse_name(nextpos, &name);
             if(!end_name) {
                 parse_err("Unrecognized syntax in section declaration",
-                        text, lineno);
+                        fn, text, lineno);
                 exit(-1);
             }
             hl_append(&current_section->globals, name);
             text = end_name;
+        } else if((nextpos = strchr(text, ':'))) {
+            char* name;
+            const char* endlbl = parse_name(ftrim(text), &name);
+            if(ftrim(endlbl) != nextpos) {
+                parse_err("Invalid format for label", fn, text, lineno);
+                exit(-1);
+            }
+            printf("label %s\n", name);
+            free(name);
+            text = nextpos+1;
         } else {
-            parse_err("Unrecognized syntax", text, lineno);
+            parse_err("Unrecognized syntax", fn, text, lineno);
             exit(-1);
         }
     }

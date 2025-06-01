@@ -28,7 +28,16 @@ const char* ftrim(const char* str) {
     return str;
 }
 
+char *strcpy_dup(const char *str) {
+    size_t slen = strlen(str);
+    char* result = malloc(slen+1);
+    memcpy(result, str, slen);
+    result[slen] = '\0';
+    return result;
+}
+
 char *strncpy_dup(const char *str, size_t n) {
+    // TODO this is slightly sketchy
     size_t slen = strlen(str);
     if(slen > n) slen = n;
     char* result = malloc(slen+1);

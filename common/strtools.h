@@ -27,6 +27,8 @@ const char* startswith(const char* pattern, const char* str);
  */
 const char* ftrim(const char* str);
 
+char *strcpy_dup(const char *str);
+
 /**
  * (Named slightly weirdly to avoid conflicts with newer STL)
  * Copies at most the first n characters (without null) of str into a new heap
