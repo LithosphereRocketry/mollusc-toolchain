@@ -7,6 +7,8 @@
 #include <stdbool.h>
 
 #include "strtools.h"
+#include "asm_instrs.h"
+#include "arch.h"
 
 static bool valid_in_name(char c, size_t pos) {
     return c == '_'
@@ -15,7 +17,7 @@ static bool valid_in_name(char c, size_t pos) {
 }
 
 static void parse_err(const char* msg, const char* filename, const char* text, size_t lineno) {
-    fprintf(stderr, "Unrecognized syntax at %s line %zu: %s\n%*s",
+    fprintf(stderr, "Error at %s line %zu: %s\n> %.*s\n",
                     filename, lineno, msg, (int) (eol(text)-text), text);
 }
 
@@ -52,11 +54,21 @@ struct parse_result asm_parse(const char* text, const char* filename) {
     size_t lineno = 1;
     const char* nextpos;
     struct parse_section* current_section = NULL;
+    bool line_full = false;
     while(1) {
         if(*text == '\0') break;
         else if(isspace(*text)) {
-            if(*text == '\n') lineno++;
+            if(*text == '\n') {
+                lineno++;
+                line_full = false;
+            }
             text++;
+        } else if(*text == ';') {
+            text = eol(text);
+        } else if(line_full) {
+            // anything past this point must be on a fresh line
+            parse_err("Unexpected text after statement", fn, text, lineno);
+            exit(-1);
         } else if((nextpos = (startswith("# ", text)))){
             int nchar;
             size_t new_lineno;
@@ -72,10 +84,6 @@ struct parse_result asm_parse(const char* text, const char* filename) {
                 nextpos = endstr + 1;
             }
             text = eol(nextpos) + 1;
-        } else if(*text == ';' || *text == '#') {
-            // In future it might be nice to parse preprocessor line directives
-            // but for now we can just ignore them
-            text = eol(text);
         } else if((nextpos = startswith(".section", text))) {
             char* name;
             const char* end_name = parse_name(nextpos, &name);
@@ -86,6 +94,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             }
             current_section = add_section(&result, name);
             text = end_name;
+            line_full = true;
         } else if((nextpos = startswith(".global", text))) {
             if(!current_section) {
                 parse_err("No section active", fn, text, lineno);
@@ -100,6 +109,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             }
             hl_append(&current_section->globals, name);
             text = end_name;
+            line_full = true;
         } else if((nextpos = strchr(text, ':'))) {
             char* name;
             const char* endlbl = parse_name(ftrim(text), &name);
@@ -110,6 +120,9 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             printf("label %s\n", name);
             free(name);
             text = nextpos+1;
+        } else if((nextpos = asm_parse_instr(text, current_section))) {
+            text = nextpos;
+            line_full = true;
         } else {
             parse_err("Unrecognized syntax", fn, text, lineno);
             exit(-1);
@@ -122,6 +135,16 @@ void print_section(const struct parse_section* sect) {
     printf("SECTION %s\nGLOBALS\n", sect->name);
     for(size_t i = 0; i < sect->globals.len; i++) {
         printf("\t%s\n", (char*) sect->globals.buf[i]);
+    }
+    printf("INSTRUCTIONS\n");
+    for(size_t i = 0; i < sect->instrs.len; i++) {
+        const struct parse_instr* ins = sect->instrs.buf[i];
+        printf("\t%s", arch_mnemonics[ins->type]);
+        for(size_t j = 0; j < ins->args.len; j++) {
+            if(j != 0) printf(",");
+            printf(" %s", (char*) ins->args.buf[j]);
+        }
+        printf("\n");
     }
 }
 

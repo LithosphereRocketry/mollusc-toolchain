@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
+    (void) argc, (void) argv;
     struct string_map map = sm_make();
 
     sm_put(&map, "one", (void*) 1);

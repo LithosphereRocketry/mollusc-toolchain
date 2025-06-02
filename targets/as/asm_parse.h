@@ -3,10 +3,17 @@
 
 #include <stddef.h>
 #include "structures.h"
+#include "arch.h"
+
+struct parse_instr {
+    enum arch_instr type;
+    struct heap_list args;
+};
 
 struct parse_section {
     const char* name;
     struct heap_list globals;
+    struct heap_list instrs;
 };
 
 struct parse_result {

@@ -27,6 +27,8 @@ TARGETS = $(TARGET_DIRS:$(TARGET_DIR)/%=$(OUT_DIR)/%)
 ASSEMBLY_EXS = $(wildcard $(EXAMPLE_DIR)/*.S)
 ASSEMBLY_EXS_PREPROCESS = $(ASSEMBLY_EXS:.S=.s)
 
+# Skip default rules to stop make from using the system compiler to produce asm .o's
+.SUFFIXES:
 .DEFAULT_GOAL: all
 all: $(TARGETS)
 
