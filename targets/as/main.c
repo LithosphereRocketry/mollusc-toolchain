@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     if(argc <= 1) {
         fprintf(stderr, "No file given!\n");
         exit(-1);
-    } if(argc > 2) {
+    } else if(argc > 2) {
         fprintf(stderr, "Too many files given! (Starting with %s)\n", argv[2]);
         exit(-1);
     }

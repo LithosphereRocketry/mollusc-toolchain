@@ -12,8 +12,9 @@ struct parse_instr {
 
 struct parse_section {
     const char* name;
-    struct heap_list globals;
-    struct heap_list instrs;
+    struct heap_list globals; // char*
+    struct heap_list instrs; // struct parse_instr*
+    struct string_map instr_labels; // size_t + 1
 };
 
 struct parse_result {

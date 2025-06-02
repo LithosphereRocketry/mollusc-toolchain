@@ -32,6 +32,7 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
     new_section->name = name; // todo: lifetime?
     new_section->globals = hl_make();
     new_section->instrs = hl_make();
+    new_section->instr_labels = sm_make();
 
     sm_put(&res->sections, name, new_section);
     return new_section;
@@ -112,13 +113,17 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             text = end_name;
             line_full = true;
         } else if((nextpos = strchr(text, ':'))) {
+            if(!current_section) {
+                parse_err("No section active", fn, text, lineno);
+                exit(-1);
+            }
             char* name;
             const char* endlbl = parse_name(ftrim(text), &name);
             if(ftrim(endlbl) != nextpos) {
                 parse_err("Invalid format for label", fn, text, lineno);
                 exit(-1);
             }
-            printf("label %s\n", name);
+            sm_put(&current_section->instr_labels, name, (void*) (current_section->instrs.len + 1));
             free(name);
             text = nextpos+1;
         } else if((nextpos = asm_parse_instr(text, current_section))) {
@@ -133,18 +138,25 @@ struct parse_result asm_parse(const char* text, const char* filename) {
     return result;
 }
 
+static void print_punned_addr(void* global, const char* key, void* value) {
+    (void) global;
+    printf("\t%s : %zu\n", key, ((size_t) value) - 1);
+}
+
 void print_section(const struct parse_section* sect) {
     printf("SECTION %s\nGLOBALS\n", sect->name);
     for(size_t i = 0; i < sect->globals.len; i++) {
         printf("\t%s\n", (char*) sect->globals.buf[i]);
     }
+    printf("INSTRUCTION LABELS\n");
+    sm_foreach(&sect->instr_labels, print_punned_addr, NULL);
     printf("INSTRUCTIONS\n");
     for(size_t i = 0; i < sect->instrs.len; i++) {
         const struct parse_instr* ins = sect->instrs.buf[i];
-        printf("\t%s", arch_mnemonics[ins->type]);
+        printf("\t%s\t", arch_mnemonics[ins->type]);
         for(size_t j = 0; j < ins->args.len; j++) {
-            if(j != 0) printf(",");
-            printf(" %s", (char*) ins->args.buf[j]);
+            if(j != 0) printf(", ");
+            printf("%s", (char*) ins->args.buf[j]);
         }
         printf("\n");
     }
