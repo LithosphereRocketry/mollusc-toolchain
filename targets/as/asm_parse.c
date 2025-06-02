@@ -31,6 +31,7 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
     // fill in the actual section fields
     new_section->name = name; // todo: lifetime?
     new_section->globals = hl_make();
+    new_section->instrs = hl_make();
 
     sm_put(&res->sections, name, new_section);
     return new_section;
@@ -128,6 +129,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             exit(-1);
         }
     }
+    free(fn);
     return result;
 }
 

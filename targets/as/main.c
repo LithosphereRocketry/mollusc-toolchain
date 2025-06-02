@@ -37,5 +37,7 @@ int main(int argc, char** argv) {
     }
 
     struct parse_result parsed = asm_parse(filetext, filename);
+    free(filetext);
+
     print_parse(&parsed);
 }
