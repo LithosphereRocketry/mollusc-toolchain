@@ -177,3 +177,15 @@ void sm_foreach(const struct string_map* sm,
         }
     }
 }
+
+struct string_map arr_inv_to_sm(const char **arr, size_t len) {
+    struct string_map sm = sm_make();
+    for(size_t i = 0; i < len; i++) {
+        if(arr[i]) sm_put(&sm, arr[i], (void*) i);
+    }
+    return sm;
+}
+
+struct string_map hl_inv_to_sm(const struct heap_list* hl) {
+    return arr_inv_to_sm((const char**) hl->buf, hl->len);
+}

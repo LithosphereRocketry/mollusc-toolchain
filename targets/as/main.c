@@ -4,12 +4,18 @@
 #include "argparse.h"
 #include "iotools.h"
 #include "asm_parse.h"
+#include "assemble.h"
 
 argument_t arg_out = {'o', NULL, true, {NULL}};
 
 argument_t* args[] = {
     &arg_out
 };
+
+void assemble_section(void* global, const char* name, void* section) {
+    (void) global, (void) name;
+    assemble(section);
+}
 
 int main(int argc, char** argv) {
     argc = argparse(args, sizeof(args) / sizeof(argument_t*), argc, argv);
@@ -38,6 +44,8 @@ int main(int argc, char** argv) {
 
     struct parse_result parsed = asm_parse(filetext, filename);
     free(filetext);
+
+    sm_foreach(&parsed.sections, assemble_section, NULL);
 
     print_parse(&parsed);
 }

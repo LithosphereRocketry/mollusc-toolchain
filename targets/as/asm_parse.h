@@ -6,6 +6,8 @@
 #include "arch.h"
 
 struct parse_instr {
+    const char* file;
+    size_t line;
     enum arch_instr type;
     struct heap_list args;
 };
@@ -18,6 +20,7 @@ struct parse_section {
 };
 
 struct parse_result {
+    struct heap_list filenames; // used to manage lifetime of filename strings
     struct string_map sections;
 };
 

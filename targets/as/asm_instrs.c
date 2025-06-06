@@ -8,19 +8,12 @@
 #include "structures.h"
 #include "strtools.h"
 
-static struct string_map make_instr_map() { // enum arch_instr
-    struct string_map instr_map = sm_make();
-    for(size_t i = 0; i < N_INSTRS; i++) {
-        if(arch_mnemonics[i]) sm_put(&instr_map, arch_mnemonics[i], (void*) i);
-    }
-    return instr_map;
-}
-
-const char* asm_parse_instr(const char* text, struct parse_section* dest) {
+const char* asm_parse_instr(const char* file, size_t line,
+        const char* text, struct parse_section* dest) {
     static struct string_map instr_map; // enum arch_instr
     static bool firstrun = true;
     if(firstrun) {
-        instr_map = make_instr_map();
+        instr_map = arr_inv_to_sm(arch_mnemonics, N_INSTRS);
     }
 
     const char* mnem_end = eow(text);
@@ -36,6 +29,8 @@ const char* asm_parse_instr(const char* text, struct parse_section* dest) {
     }
 
     struct parse_instr* ins = malloc(sizeof(struct parse_instr));
+    ins->file = file;
+    ins->line = line;
     ins->type = type;
     ins->args = hl_make();
 

@@ -49,10 +49,12 @@ static const char* parse_name(const char* text, char** name) {
 
 struct parse_result asm_parse(const char* text, const char* filename) {
     struct parse_result result = {
+        .filenames = hl_make(),
         .sections = sm_make()
     };
     // mildly hacky to avoid double free
     char* fn = strcpy_dup(filename);
+    hl_append(&result.filenames, fn);
     size_t lineno = 1;
     const char* nextpos;
     struct parse_section* current_section = NULL;
@@ -81,8 +83,8 @@ struct parse_result asm_parse(const char* text, const char* filename) {
                 nextpos += nchar;
                 const char* endstr = strchr(nextpos, '\"');
                 char* new_filename = strncpy_dup(nextpos, endstr-nextpos);
-                free(fn);
                 fn = new_filename;
+                hl_append(&result.filenames, fn);
                 nextpos = endstr + 1;
             }
             text = eol(nextpos) + 1;
@@ -123,10 +125,10 @@ struct parse_result asm_parse(const char* text, const char* filename) {
                 parse_err("Invalid format for label", fn, text, lineno);
                 exit(-1);
             }
-            sm_put(&current_section->instr_labels, name, (void*) (current_section->instrs.len + 1));
+            sm_put(&current_section->instr_labels, name, (void*) current_section->instrs.len);
             free(name);
             text = nextpos+1;
-        } else if((nextpos = asm_parse_instr(text, current_section))) {
+        } else if((nextpos = asm_parse_instr(fn, lineno, text, current_section))) {
             text = nextpos;
             line_full = true;
         } else {
@@ -134,13 +136,12 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             exit(-1);
         }
     }
-    free(fn);
     return result;
 }
 
 static void print_punned_addr(void* global, const char* key, void* value) {
     (void) global;
-    printf("\t%s : %zu\n", key, ((size_t) value) - 1);
+    printf("\t%s : %zx\n", key, (size_t) value);
 }
 
 void print_section(const struct parse_section* sect) {
