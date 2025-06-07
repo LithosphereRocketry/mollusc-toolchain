@@ -2,6 +2,9 @@
 #define ARCH_H
 
 #include <stddef.h>
+#include <stdint.h>
+
+typedef uint32_t arch_word_t;
 
 enum arch_instr {
     I_INVALID = (size_t) NULL, // make sure (int) nullptr always maps to an error
@@ -11,8 +14,8 @@ enum arch_instr {
 
 enum arch_register {
     R_ZERO,
-    R_S0RA,
-    R_S1SP,
+    R_RA,
+    R_SP,
     R_S2,
     R_S3,
     R_S4,
@@ -29,6 +32,8 @@ enum arch_register {
 };
 
 extern const char* arch_mnemonics[N_INSTRS];
+extern const arch_word_t arch_basebits[N_INSTRS];
+// TODO: support more than one word per instr
 
 extern const char* arch_regnames[];
 

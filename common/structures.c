@@ -58,6 +58,23 @@ static uint32_t sm_hash(const char* str) {
     return h;
 }
 
+bool sm_haskey(const struct string_map* sm, const char* key) {
+    if(sm->_entries == 0) return false;
+
+    uint32_t hash = sm_hash(key);
+    struct string_map_entry* e = sm->table[hash % sm->_entries];
+    while(1) {
+        if(e == NULL) {
+            return false;
+        }
+        // check the hash first to avoid strcmp when we know it'll fail
+        if(e->_hash == hash && !strcmp(key, e->key)) {
+            return true;
+        }
+        e = e->next;
+    }
+}
+
 void* sm_get(const struct string_map* sm, const char* key) {
     if(sm->_entries == 0) return NULL;
 

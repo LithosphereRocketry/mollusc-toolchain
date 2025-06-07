@@ -4,10 +4,14 @@ const char* arch_mnemonics[] = {
     [I_ADD] = "add"
 };
 
+const arch_word_t arch_basebits[] = {
+    [I_ADD] = 0x00000000
+};
+
 const char* arch_regnames[] = {
     [R_ZERO] = "zero",
-    [R_S0RA] = "ra",
-    [R_S1SP] = "sp",
+    [R_RA] = "ra",
+    [R_SP] = "sp",
     [R_S2] = "s2",
     [R_S3] = "s3",
     [R_S4] = "s4",

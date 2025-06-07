@@ -13,8 +13,10 @@ argument_t* args[] = {
 };
 
 void assemble_section(void* global, const char* name, void* section) {
-    (void) global, (void) name;
-    assemble(section);
+    (void) global;
+    struct assembly_result res = assemble(section);
+    printf("Assembly for section \"%s\":\n", name);
+    print_assembly(&res);
 }
 
 int main(int argc, char** argv) {
@@ -44,8 +46,8 @@ int main(int argc, char** argv) {
 
     struct parse_result parsed = asm_parse(filetext, filename);
     free(filetext);
+    printf("Parse result:\n");
+    print_parse(&parsed);
 
     sm_foreach(&parsed.sections, assemble_section, NULL);
-
-    print_parse(&parsed);
 }
