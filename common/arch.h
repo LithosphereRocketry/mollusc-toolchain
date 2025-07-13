@@ -12,6 +12,17 @@ enum arch_instr {
     N_INSTRS
 };
 
+enum arch_predicate {
+    P_P0,
+    P_P1,
+    P_P2,
+    P_P3,
+    P_P4,
+    P_P5,
+    P_P6,
+    P_P7
+};
+
 enum arch_register {
     R_ZERO,
     R_RA,
@@ -36,5 +47,6 @@ extern const arch_word_t arch_basebits[N_INSTRS];
 // TODO: support more than one word per instr
 
 extern const char* arch_regnames[];
+extern const char* arch_prednames[];
 
 #endif

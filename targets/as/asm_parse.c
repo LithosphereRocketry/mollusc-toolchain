@@ -154,6 +154,9 @@ void print_section(const struct parse_section* sect) {
     printf("INSTRUCTIONS\n");
     for(size_t i = 0; i < sect->instrs.len; i++) {
         const struct parse_instr* ins = sect->instrs.buf[i];
+        if(ins->pred != NULL) {
+            printf("%c%s", ins->pred_inv ? '!' : '?', ins->pred);
+        }
         printf("\t%s\t", arch_mnemonics[ins->type]);
         for(size_t j = 0; j < ins->args.len; j++) {
             if(j != 0) printf(", ");

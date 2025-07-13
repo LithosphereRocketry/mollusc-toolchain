@@ -8,6 +8,8 @@
 struct parse_instr {
     const char* file;
     size_t line;
+    bool pred_inv;
+    const char* pred;
     enum arch_instr type;
     struct heap_list args;
 };

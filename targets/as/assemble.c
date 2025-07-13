@@ -17,6 +17,10 @@ static size_t assemble_instr(struct assembly_result* dest, size_t offs, struct p
         exit(-1);
     }
     dest->data[offs] = arch_basebits[instr->type];
+
+    if(!assemble_predicate(dest, offs, instr->pred, !instr->pred_inv)) {
+        asm_err("Tried to assemble invalid predicate", instr->pred, instr->file, instr->line);
+    }
     
     const assemble_arg_t* argtype = arch_arguments[instr->type];
     if(!argtype) {

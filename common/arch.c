@@ -8,6 +8,17 @@ const arch_word_t arch_basebits[] = {
     [I_ADD] = 0x00000000
 };
 
+const char* arch_prednames[] = {
+    [P_P0] = "p0",
+    [P_P1] = "p1",
+    [P_P2] = "p2",
+    [P_P3] = "p3",
+    [P_P4] = "p4",
+    [P_P5] = "p5",
+    [P_P6] = "p6",
+    [P_P7] = "p7"
+};
+
 const char* arch_regnames[] = {
     [R_ZERO] = "zero",
     [R_RA] = "ra",

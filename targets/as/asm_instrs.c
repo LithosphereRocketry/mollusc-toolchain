@@ -16,6 +16,16 @@ const char* asm_parse_instr(const char* file, size_t line,
         instr_map = arr_inv_to_sm(arch_mnemonics, N_INSTRS);
     }
 
+    bool pred_inv = true;
+    const char* pred = NULL;
+    if(*text == '?' || *text == '!') {
+        if(*text == '?') pred_inv = false;
+        text++;
+        const char* pred_end = eow(text);
+        pred = strncpy_dup(text, pred_end - text);
+        text = ftrim(pred_end);
+    }
+    
     const char* mnem_end = eow(text);
     // this can definitely be done without malloc but I'm lazy
     char* mnem_in = strncpy_dup(text, mnem_end - text);
@@ -31,6 +41,8 @@ const char* asm_parse_instr(const char* file, size_t line,
     struct parse_instr* ins = malloc(sizeof(struct parse_instr));
     ins->file = file;
     ins->line = line;
+    ins->pred_inv = pred_inv;
+    ins->pred = pred;
     ins->type = type;
     ins->args = hl_make();
 
