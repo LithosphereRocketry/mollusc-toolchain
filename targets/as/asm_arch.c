@@ -62,16 +62,16 @@ static bool assemble_rb(struct assembly_result* res, size_t offs, const char* ar
     return assemble_reg(res, offs, arg, 0);
 }
 
-static bool assemble_imm11(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_imm10(struct assembly_result* res, size_t offs, const char* arg) {
     char* endstr;
     long val = strtol(arg, &endstr, 0);
     if(endstr == arg) return false;
-    res->data[offs] |= (1 << 19) | (val & ((1 << 11) - 1));
+    res->data[offs] |= (1 << 10) | (val & ((1 << 10) - 1));
     return true;
 }
 
 static bool assemble_rbi(struct assembly_result* res, size_t offs, const char* arg) {
-    return assemble_rb(res, offs, arg) || assemble_imm11(res, offs, arg);
+    return assemble_rb(res, offs, arg) || assemble_imm10(res, offs, arg);
 }
 
 static const assemble_arg_t argmap_type_r[] =
