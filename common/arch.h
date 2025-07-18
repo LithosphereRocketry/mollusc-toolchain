@@ -8,7 +8,24 @@ typedef uint32_t arch_word_t;
 
 enum arch_instr {
     I_INVALID = (size_t) NULL, // make sure (int) nullptr always maps to an error
+    I_J,
+    I_LUI,
+    I_AUIPC,
     I_ADD,
+    I_SUB,
+    I_AND,
+    I_OR,
+    I_XOR,
+    I_SL,
+    I_SR,
+    I_SRA,
+    I_LTU,
+    I_LT,
+    I_EQ,
+    I_BIT,
+    I_LDP,
+    I_STP,
+    I_JX,
     N_INSTRS
 };
 

@@ -28,6 +28,14 @@ const char* ftrim(const char* str) {
     return str;
 }
 
+const char* strnchr(const char* str, char c, size_t n) {
+    for(size_t i = 0; i < n; i++) {
+        if(str[i] == '\0') return NULL;
+        if(str[i] == c) return str+i;
+    }
+    return NULL;
+}
+
 char *strcpy_dup(const char *str) {
     size_t slen = strlen(str);
     char* result = malloc(slen+1);

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-COPTS = --std=c99 -g3 -Og -Wall -Wextra
+COPTS = --std=c99 -g3 -Og -Wall -Wextra -Werror=implicit-function-declaration
 
 TARGET_DIR = targets
 COMMON_DIR = common

@@ -5,14 +5,7 @@
 #include "arch.h"
 
 enum reloc_type {
-    REL_WORD_ABSOLUTE,
-    REL_WORD_RELATIVE,
-    REL_IMM_ABSOLUTE,
-    REL_IMM_RELATIVE,
-    REL_UPPER_ABSOLUTE,
-    REL_UPPER_RELATIVE,
-    REL_JUMP_ABSOLUTE,
-    REL_JUMP_RELATIVE
+    RELOC_J_REL
 };
 
 struct relocation {

@@ -70,11 +70,20 @@ struct assembly_result assemble(const struct parse_section* parse) {
     }
 
     res.data_sz = offset_word;
-    if(res.data) res.data = realloc(res.data, res.data_sz);
+    if(res.data) res.data = realloc(res.data, res.data_sz * sizeof(arch_word_t));
     return res;
 }
 
+static const char* rel_enum_names[] = {
+    [RELOC_J_REL] = "RELOC_J_REL"
+};
+
 void print_assembly(const struct assembly_result* res) {
+    printf("RELOCATIONS\n");
+    for(size_t i = 0; i < res->relocations.len; i++) {
+        struct relocation* reloc = res->relocations.buf[i];
+        printf("\t%s %s %zu\n", rel_enum_names[reloc->type], reloc->symbol, reloc->offset);
+    }
     printf("BINARY\n");
     for(size_t i = 0; i < res->data_sz; i++) {
         printf("\t%0*x\n", (int) sizeof(arch_word_t)*2, res->data[i]);

@@ -7,14 +7,9 @@
 #include <stdbool.h>
 
 #include "strtools.h"
+#include "asm_common.h"
 #include "asm_instrs.h"
 #include "arch.h"
-
-static bool valid_in_name(char c, size_t pos) {
-    return c == '_'
-        || isalpha(c)
-        || (isdigit(c) && pos != 0);
-}
 
 static void parse_err(const char* msg, const char* filename, const char* text, size_t lineno) {
     fprintf(stderr, "Error at %s line %zu: %s\n> %.*s\n",
@@ -36,15 +31,6 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
 
     sm_put(&res->sections, name, new_section);
     return new_section;
-}
-
-static const char* parse_name(const char* text, char** name) {
-    text = ftrim(text);
-    const char* endname = text;
-    while(valid_in_name(*endname, endname-text)) endname++;
-    if(endname == text) return NULL;
-    *name = strncpy_dup(text, endname-text);
-    return endname;
 }
 
 struct parse_result asm_parse(const char* text, const char* filename) {
@@ -114,7 +100,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             hl_append(&current_section->globals, name);
             text = end_name;
             line_full = true;
-        } else if((nextpos = strchr(text, ':'))) {
+        } else if((nextpos = strnchr(text, ':', eol(text)-text))) {
             if(!current_section) {
                 parse_err("No section active", fn, text, lineno);
                 exit(-1);

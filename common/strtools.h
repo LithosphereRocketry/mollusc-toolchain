@@ -22,6 +22,12 @@ const char* eow(const char* str);
 const char* startswith(const char* pattern, const char* str);
 
 /**
+ * Platform-independent implementation of Linux's strnchr. Finds a character
+ * in a null-terminated string, looking at at most n characters.
+ */
+const char* strnchr(const char* str, char c, size_t n);
+
+/**
  * Returns a pointer to the first non-whitespace character in a null-terminated
  * string.
  */
