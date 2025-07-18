@@ -14,6 +14,7 @@ const char* asm_parse_instr(const char* file, size_t line,
     static bool firstrun = true;
     if(firstrun) {
         instr_map = arr_inv_to_sm(arch_mnemonics, N_INSTRS);
+        firstrun = false;
     }
 
     bool pred_inv = true;

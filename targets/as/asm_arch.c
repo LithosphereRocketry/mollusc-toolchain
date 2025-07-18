@@ -13,6 +13,7 @@ static size_t regnum(const char* name) {
         // TODO: better way to find size (this is basically all that uses it tho)
         map = arr_inv_to_sm(arch_regnames, 16);
         // for now, no aliases for registers
+        firstrun = false;
     }
     if(!sm_haskey(&map, name)) return INVALID_REG;
     return (size_t) sm_get(&map, name);
@@ -25,6 +26,7 @@ static size_t prednum(const char* name) {
         // TODO: better way to find size (this is basically all that uses it tho)
         map = arr_inv_to_sm(arch_prednames, 8);
         // for now, no aliases for predicates
+        firstrun = false;
     }
     if(!sm_haskey(&map, name)) return INVALID_REG;
     return (size_t) sm_get(&map, name);
