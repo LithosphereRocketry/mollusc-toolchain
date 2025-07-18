@@ -17,6 +17,7 @@ void assemble_section(void* global, const char* name, void* section) {
     struct assembly_result res = assemble(section);
     printf("Assembly for section \"%s\":\n", name);
     print_assembly(&res);
+    destroy_assembly(&res);
 }
 
 int main(int argc, char** argv) {
@@ -39,6 +40,7 @@ int main(int argc, char** argv) {
     // I'm operating under the assumption here that any assembly file worth
     // using on this system will fit in system memory
     char* filetext = fread_dup(file);
+    fclose(file);
     if(!filetext) {
         fprintf(stderr, "Ouch, we ran out of memory or something\n");
         exit(-1);
@@ -50,4 +52,6 @@ int main(int argc, char** argv) {
     print_parse(&parsed);
 
     sm_foreach(&parsed.sections, assemble_section, NULL);
+    
+    destroy_parse(&parsed);
 }

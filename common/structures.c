@@ -29,8 +29,15 @@ void hl_append(struct heap_list* hl, void* x) {
     hl->len ++;
 }
 
-void hl_destroy(struct heap_list* hl) {
-    if(hl->buf) free(hl->buf);
+void hl_destroy(struct heap_list* hl, bool free_values) {
+    if(hl->buf) {
+        if(free_values) {
+            for(size_t i = 0; i < hl->len; i++) {
+                if(hl->buf[i]) free(hl->buf[i]);
+            }
+        }
+        free(hl->buf);
+    }
     hl->buf = NULL;
     hl->len = 0;
     hl->_cap = 0;
@@ -182,7 +189,6 @@ void sm_print(const struct string_map* sm) {
         printf("\n");
     }
 }
-
 
 void sm_foreach(const struct string_map* sm,
         void (*func)(void*, const char*, void*), void* global) {

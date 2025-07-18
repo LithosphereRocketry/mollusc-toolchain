@@ -30,5 +30,6 @@ struct parse_result asm_parse(const char* text, const char* filename);
 
 void print_section(const struct parse_section* sect);
 void print_parse(const struct parse_result* res);
+void destroy_parse(struct parse_result* res);
 
 #endif

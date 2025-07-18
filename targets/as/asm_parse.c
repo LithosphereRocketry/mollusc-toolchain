@@ -159,5 +159,27 @@ static void print_section_wrapper(void* global, const char* key, void* value) {
 }
 
 void print_parse(const struct parse_result* res) {
-    sm_foreach(&res->sections, print_section_wrapper, NULL) ;
+    sm_foreach(&res->sections, print_section_wrapper, NULL);
+}
+
+static void destroy_parse_section(void* global, const char* key, void* value) {
+    // intentionally ignore without warnings
+    struct parse_section* s = value;
+    (void) global; (void) key;
+    free((char*) s->name);
+    hl_destroy(&s->globals, true);
+    for(size_t i = 0; i < s->instrs.len; i++) {
+        struct parse_instr* instr = s->instrs.buf[i];
+        if(instr->pred) free((char*) instr->pred);
+        hl_destroy(&instr->args, true);
+    }
+    hl_destroy(&s->instrs, true);
+    sm_destroy(&s->instr_labels, false);
+    
+}
+
+void destroy_parse(struct parse_result* res) {
+    sm_foreach(&res->sections, destroy_parse_section, NULL);
+    sm_destroy(&res->sections, true);
+    hl_destroy(&res->filenames, true);
 }

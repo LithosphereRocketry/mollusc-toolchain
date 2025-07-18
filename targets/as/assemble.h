@@ -28,4 +28,6 @@ struct assembly_result assemble(const struct parse_section* parse);
 
 void print_assembly(const struct assembly_result* res);
 
+void destroy_assembly(struct assembly_result* res);
+
 #endif

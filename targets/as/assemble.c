@@ -89,3 +89,16 @@ void print_assembly(const struct assembly_result* res) {
         printf("\t%0*x\n", (int) sizeof(arch_word_t)*2, res->data[i]);
     }
 }
+
+void destroy_assembly(struct assembly_result* res) {
+    for(size_t i = 0; i < res->relocations.len; i++) {
+        struct relocation* reloc = res->relocations.buf[i];
+        free((char*) reloc->symbol);
+    }
+    hl_destroy(&res->relocations, true);
+    sm_destroy(&res->absolute_syms, true);
+    sm_destroy(&res->relative_syms, true);
+    free(res->data);
+    res->data = NULL;
+    res->data_sz = 0;
+}

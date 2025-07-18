@@ -17,11 +17,9 @@ void* hl_get(const struct heap_list* hl, size_t i);
 
 void hl_resize(struct heap_list* hl, size_t n);
 
-void hl_resize(struct heap_list* hl, size_t n);
-
 void hl_append(struct heap_list* hl, void* x);
 
-void hl_destroy(struct heap_list* hl);
+void hl_destroy(struct heap_list* hl, bool free_values);
 
 struct string_map_entry {
     char* key;

@@ -1,0 +1,98 @@
+==17700== Memcheck, a memory error detector
+==17700== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==17700== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==17700== Command: out/as -o examples/hello.o examples/hello.S
+==17700== 
+==17700== 
+==17700== HEAP SUMMARY:
+==17700==     in use at exit: 38,096 bytes in 1,742 blocks
+==17700==   total heap usage: 2,130 allocs, 388 frees, 55,743 bytes allocated
+==17700== 
+==17700== 688 (128 direct, 560 indirect) bytes in 2 blocks are definitely lost in loss record 16 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10AEE8: prednum (asm_arch.c:26)
+==17700==    by 0x10AF6D: assemble_pd (asm_arch.c:65)
+==17700==    by 0x10BDDD: assemble_instr (assemble.c:38)
+==17700==    by 0x10BF81: assemble (assemble.c:69)
+==17700==    by 0x10C1AB: assemble_section (main.c:17)
+==17700==    by 0x10ADBE: sm_foreach (structures.c:198)
+==17700==    by 0x10C2BF: main (main.c:54)
+==17700== 
+==17700== 1,032 (192 direct, 840 indirect) bytes in 3 blocks are definitely lost in loss record 19 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10AEE8: prednum (asm_arch.c:26)
+==17700==    by 0x10B26E: assemble_predicate (asm_arch.c:48)
+==17700==    by 0x10BD82: assemble_instr (assemble.c:21)
+==17700==    by 0x10BF81: assemble (assemble.c:69)
+==17700==    by 0x10C1AB: assemble_section (main.c:17)
+==17700==    by 0x10ADBE: sm_foreach (structures.c:198)
+==17700==    by 0x10C2BF: main (main.c:54)
+==17700== 
+==17700== 7,590 (1,408 direct, 6,182 indirect) bytes in 11 blocks are definitely lost in loss record 24 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10AFE2: regnum (asm_arch.c:14)
+==17700==    by 0x10B055: assemble_reg (asm_arch.c:34)
+==17700==    by 0x10B0BC: assemble_rd (asm_arch.c:75)
+==17700==    by 0x10BDDD: assemble_instr (assemble.c:38)
+==17700==    by 0x10BF81: assemble (assemble.c:69)
+==17700==    by 0x10C1AB: assemble_section (main.c:17)
+==17700==    by 0x10ADBE: sm_foreach (structures.c:198)
+==17700==    by 0x10C2BF: main (main.c:54)
+==17700== 
+==17700== 7,590 (1,408 direct, 6,182 indirect) bytes in 11 blocks are definitely lost in loss record 25 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10AFE2: regnum (asm_arch.c:14)
+==17700==    by 0x10B055: assemble_reg (asm_arch.c:34)
+==17700==    by 0x10B0A5: assemble_ra (asm_arch.c:78)
+==17700==    by 0x10BDDD: assemble_instr (assemble.c:38)
+==17700==    by 0x10BF81: assemble (assemble.c:69)
+==17700==    by 0x10C1AB: assemble_section (main.c:17)
+==17700==    by 0x10ADBE: sm_foreach (structures.c:198)
+==17700==    by 0x10C2BF: main (main.c:54)
+==17700== 
+==17700== 7,590 (1,408 direct, 6,182 indirect) bytes in 11 blocks are definitely lost in loss record 26 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10AFE2: regnum (asm_arch.c:14)
+==17700==    by 0x10B055: assemble_reg (asm_arch.c:34)
+==17700==    by 0x10B08E: assemble_rb (asm_arch.c:81)
+==17700==    by 0x10B151: assemble_rbi (asm_arch.c:116)
+==17700==    by 0x10BDDD: assemble_instr (assemble.c:38)
+==17700==    by 0x10BF81: assemble (assemble.c:69)
+==17700==    by 0x10C1AB: assemble_section (main.c:17)
+==17700==    by 0x10ADBE: sm_foreach (structures.c:198)
+==17700== 
+==17700== 11,674 (3,328 direct, 8,346 indirect) bytes in 13 blocks are definitely lost in loss record 27 of 27
+==17700==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17700==    by 0x10A96F: sm_expand (structures.c:119)
+==17700==    by 0x10ACF6: sm_put (structures.c:139)
+==17700==    by 0x10AE3E: arr_inv_to_sm (structures.c:207)
+==17700==    by 0x10B3A3: asm_parse_instr (asm_instrs.c:16)
+==17700==    by 0x10BA6C: asm_parse (asm_parse.c:117)
+==17700==    by 0x10C283: main (main.c:49)
+==17700== 
+==17700== LEAK SUMMARY:
+==17700==    definitely lost: 7,872 bytes in 51 blocks
+==17700==    indirectly lost: 28,292 bytes in 1,604 blocks
+==17700==      possibly lost: 0 bytes in 0 blocks
+==17700==    still reachable: 1,932 bytes in 87 blocks
+==17700==         suppressed: 0 bytes in 0 blocks
+==17700== Reachable blocks (those to which a pointer was found) are not shown.
+==17700== To see them, rerun with: --leak-check=full --show-leak-kinds=all
+==17700== 
+==17700== For lists of detected and suppressed errors, rerun with: -s
+==17700== ERROR SUMMARY: 6 errors from 6 contexts (suppressed: 0 from 0)
