@@ -4,13 +4,14 @@
 #include <stdlib.h>
 
 #include "asm_arch.h"
+#include "arch_link.h"
 
 static void asm_err(const char* msg, const char* hint, const char* filename, size_t lineno) {
     fprintf(stderr, "Error at %s line %zu: %s (%s)\n",
                     filename, lineno, msg, hint);
 }
 
-static size_t assemble_instr(struct assembly_result* dest, size_t offs, struct parse_instr* instr) {
+static size_t assemble_instr(struct bin_section* dest, size_t offs, struct parse_instr* instr) {
     if((void*) (instr->type) == NULL) {
         asm_err("Tried to assemble an invalid instruction",
                 "N/A", instr->file, instr->line);
@@ -50,8 +51,14 @@ static size_t assemble_instr(struct assembly_result* dest, size_t offs, struct p
     return 1;
 }
 
-struct assembly_result assemble(const struct parse_section* parse) {
-    struct assembly_result res = {
+static void transfer_asm_label(void* global, const char* key, void* value) {
+    struct string_map* relative_syms = global;
+    size_t offset = ((size_t) value) * sizeof(arch_word_t);
+    sm_put(relative_syms, key, (void*) offset);
+}
+
+struct bin_section assemble(const struct parse_section* parse) {
+    struct bin_section res = {
         .relocations = hl_make(),
         .absolute_syms = sm_make(),
         .relative_syms = sm_make(),
@@ -69,8 +76,11 @@ struct assembly_result assemble(const struct parse_section* parse) {
         offset_word += assemble_instr(&res, offset_word, instr);
     }
 
+    sm_foreach(&parse->instr_labels, transfer_asm_label, &res.relative_syms);
+
     res.data_sz = offset_word;
     if(res.data) res.data = realloc(res.data, res.data_sz * sizeof(arch_word_t));
+    link_section(&res);
     return res;
 }
 
@@ -78,7 +88,7 @@ static const char* rel_enum_names[] = {
     [RELOC_J_REL] = "RELOC_J_REL"
 };
 
-void print_assembly(const struct assembly_result* res) {
+void print_assembly(const struct bin_section* res) {
     printf("RELOCATIONS\n");
     for(size_t i = 0; i < res->relocations.len; i++) {
         struct relocation* reloc = res->relocations.buf[i];
@@ -90,14 +100,14 @@ void print_assembly(const struct assembly_result* res) {
     }
 }
 
-void destroy_assembly(struct assembly_result* res) {
+void destroy_assembly(struct bin_section* res) {
     for(size_t i = 0; i < res->relocations.len; i++) {
         struct relocation* reloc = res->relocations.buf[i];
         free((char*) reloc->symbol);
     }
     hl_destroy(&res->relocations, true);
-    sm_destroy(&res->absolute_syms, true);
-    sm_destroy(&res->relative_syms, true);
+    sm_destroy(&res->absolute_syms, false);
+    sm_destroy(&res->relative_syms, false);
     free(res->data);
     res->data = NULL;
     res->data_sz = 0;

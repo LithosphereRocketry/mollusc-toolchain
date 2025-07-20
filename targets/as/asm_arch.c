@@ -32,7 +32,7 @@ static size_t prednum(const char* name) {
     return (size_t) sm_get(&map, name);
 }
 
-static bool assemble_reg(struct assembly_result* res, size_t offs, const char* arg, size_t shift) {
+static bool assemble_reg(struct bin_section* res, size_t offs, const char* arg, size_t shift) {
     size_t reg = regnum(arg);
     if(reg == INVALID_REG) {
         return false;
@@ -42,7 +42,7 @@ static bool assemble_reg(struct assembly_result* res, size_t offs, const char* a
     }
 }
 
-bool assemble_predicate(struct assembly_result* res, size_t offs, const char* arg, bool nonzero) {
+bool assemble_predicate(struct bin_section* res, size_t offs, const char* arg, bool nonzero) {
     if(!arg) {
         // Default (always run) predicate is equivalent to all 0s
         return true;
@@ -56,7 +56,7 @@ bool assemble_predicate(struct assembly_result* res, size_t offs, const char* ar
         return true;
     }
 }
-static bool assemble_pd(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
     bool invert = false;
     if(*arg == '!') {
         invert = true;
@@ -73,17 +73,17 @@ static bool assemble_pd(struct assembly_result* res, size_t offs, const char* ar
         return true;
     }
 }
-static bool assemble_rd(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_rd(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 24);
 }
-static bool assemble_ra(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_ra(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 12);
 }
-static bool assemble_rb(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_rb(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 0);
 }
 
-static bool assemble_imm10(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_imm10(struct bin_section* res, size_t offs, const char* arg) {
     char* endstr;
     long val = strtol(arg, &endstr, 0);
     if(endstr == arg) return false;
@@ -91,7 +91,7 @@ static bool assemble_imm10(struct assembly_result* res, size_t offs, const char*
     return true;
 }
 
-static bool assemble_immj(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_immj(struct bin_section* res, size_t offs, const char* arg) {
     char* endstr;
     long val = strtol(arg, &endstr, 0);
     if(endstr == arg) { // no number
@@ -114,7 +114,7 @@ static bool assemble_immj(struct assembly_result* res, size_t offs, const char* 
     }
 }
 
-static bool assemble_rbi(struct assembly_result* res, size_t offs, const char* arg) {
+static bool assemble_rbi(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_rb(res, offs, arg) || assemble_imm10(res, offs, arg);
 }
 

@@ -15,7 +15,7 @@ argument_t* args[] = {
 void assemble_section(void* global, const char* name, void* value) {
     struct string_map* bin_sections = global;
     struct parse_section* section = value;
-    struct assembly_result* res = malloc(sizeof(struct assembly_result));
+    struct bin_section* res = malloc(sizeof(struct bin_section));
     *res = assemble(section);
     sm_put(bin_sections, name, res);
 }

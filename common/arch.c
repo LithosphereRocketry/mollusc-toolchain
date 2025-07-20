@@ -71,3 +71,7 @@ const char* arch_regnames[] = {
     [R_T0] = "t0",
     [R_T1] = "t1"
 };
+
+const char* arch_relocnames[] = {
+    [RELOC_J_REL] = "RELOC_J_REL"
+};

@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "structures.h"
+
 typedef uint32_t arch_word_t;
 
 enum arch_instr {
@@ -59,11 +61,30 @@ enum arch_register {
     R_T1
 };
 
+enum reloc_type {
+    RELOC_J_REL
+};
+
+struct relocation {
+    enum reloc_type type;
+    const char* symbol;
+    size_t offset; // words
+};
+
+struct bin_section {
+    struct heap_list relocations; // struct relocation*
+    struct string_map relative_syms; // size_t, bytes
+    struct string_map absolute_syms; // size_t, bytes
+    size_t data_sz;
+    arch_word_t* data;
+};
+
 extern const char* arch_mnemonics[N_INSTRS];
 extern const arch_word_t arch_basebits[N_INSTRS];
 // TODO: support more than one word per instr
 
 extern const char* arch_regnames[];
 extern const char* arch_prednames[];
+extern const char* arch_relocnames[];
 
 #endif
