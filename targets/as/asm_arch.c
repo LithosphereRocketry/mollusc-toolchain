@@ -86,7 +86,7 @@ static bool assemble_rb(struct bin_section* res, size_t offs, const char* arg) {
 static bool assemble_imm10(struct bin_section* res, size_t offs, const char* arg) {
     char* endstr;
     long val = strtol(arg, &endstr, 0);
-    if(endstr == arg) return false;
+    if(*endstr != '\0') return false;
     res->data[offs] |= (1 << 10) | (val & ((1 << 10) - 1));
     return true;
 }

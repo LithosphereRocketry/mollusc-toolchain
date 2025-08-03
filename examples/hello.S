@@ -2,6 +2,7 @@
 .global main
 
 main:   
+        add a0, zero, 47
         j ra, fibonacci
 halt:
         j zero, halt

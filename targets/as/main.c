@@ -58,6 +58,23 @@ int main(int argc, char** argv) {
 
     struct string_map bin_sections = sm_make();
     sm_foreach(&parsed.sections, assemble_section, &bin_sections);
+
+    struct bin_section* textbin = sm_get(&bin_sections, "text");
+    if(!textbin) {
+        fprintf(stderr, "No text section in assembly!\n");
+        exit(-1);
+    }
+    if(textbin->relocations.len > 0) {
+        fprintf(stderr, "Text section has unresovled labels\n");
+        print_assembly(textbin);
+        exit(-1);
+    }
+    const char* outname = "a.out";
+    if(arg_out.result.value) outname = arg_out.result.value;
+    FILE* outfile = fopen(outname, "w");
+    fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
+    fclose(outfile);
+
     sm_foreach(&bin_sections, print_destroy_asm_section, NULL);
     sm_destroy(&bin_sections, true);
     

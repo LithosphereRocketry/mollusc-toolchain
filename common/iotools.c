@@ -34,7 +34,7 @@ static char* fread_dup_helper(FILE* stream, int until) {
             }
             str = newstr;
         }
-        if(str[size-1] == until) break;
+        if(((unsigned char) str[size-1]) == until) break;
     }
     str[size] = '\0';
     str = realloc(str, size+1);

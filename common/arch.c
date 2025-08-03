@@ -1,6 +1,7 @@
 #include "arch.h"
 
 const char* arch_mnemonics[] = {
+    [I_INVALID]="[invalid]",
     [I_J] =     "j",
     [I_LUI] =   "lui",
     [I_AUIPC] = "auipc",
