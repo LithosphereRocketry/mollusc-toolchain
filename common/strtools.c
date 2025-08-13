@@ -28,6 +28,12 @@ const char* ftrim(const char* str) {
     return str;
 }
 
+const char* btrim(const char* str) {
+    const char* eptr = str + strlen(str) - 1;
+    while(eptr >= str && isspace(*eptr)) eptr--;
+    return eptr+1;
+}
+
 const char* strnchr(const char* str, char c, size_t n) {
     for(size_t i = 0; i < n; i++) {
         if(str[i] == '\0') return NULL;

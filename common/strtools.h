@@ -33,6 +33,12 @@ const char* strnchr(const char* str, char c, size_t n);
  */
 const char* ftrim(const char* str);
 
+/**
+ * Returns a pointer to the last whitespace character in a null-terminated
+ * string.
+ */
+const char* btrim(const char* str);
+
 char *strcpy_dup(const char *str);
 
 /**
