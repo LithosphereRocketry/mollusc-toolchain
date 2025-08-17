@@ -1,5 +1,6 @@
 .vscode/
 out/
+test_out/
 
 # preprocessed asm
 *.s

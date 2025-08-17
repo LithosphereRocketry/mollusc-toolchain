@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "arch.h"
+#include "asm_pseudo.h"
 #include "structures.h"
 #include "strtools.h"
 
@@ -14,6 +15,11 @@ const char* asm_parse_instr(const char* file, size_t line,
     static bool firstrun = true;
     if(firstrun) {
         instr_map = arr_inv_to_sm(arch_mnemonics, N_INSTRS);
+        for(size_t i = N_INSTRS; i < N_PSEUDOINSTRS; i++) {
+            if(arch_pseudo_mnemonics[i]) {
+                sm_put(&instr_map, arch_pseudo_mnemonics[i], (void*) i);
+            }
+        }
         firstrun = false;
     }
 
@@ -32,10 +38,10 @@ const char* asm_parse_instr(const char* file, size_t line,
     char* mnem_in = strncpy_dup(text, mnem_end - text);
     // clang likes to complain that this is an UB cast, but it should be fine(tm)
     // as long as enum roundtrips with void*
-    enum arch_instr type = (enum arch_instr) sm_get(&instr_map, mnem_in);
+    enum arch_pseudoinstr type = (enum arch_pseudoinstr) sm_get(&instr_map, mnem_in);
     free(mnem_in);
 
-    if(type == I_INVALID) {
+    if(type == (enum arch_pseudoinstr) I_INVALID) {
         return NULL;
     }
 

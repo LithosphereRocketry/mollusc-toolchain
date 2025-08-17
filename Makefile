@@ -1,6 +1,6 @@
 .PHONY: all clean test test-emu
 
-COPTS = --std=c99 -g3 -Og -Wall -Wextra -Werror=implicit-function-declaration
+COPTS = --std=c99 -g3 -Og -Wall -Wextra -Werror=implicit-function-declaration -Werror=return-type
 
 ASMPP_OPTS = -undef 
 
@@ -12,7 +12,7 @@ TEST_EMU_DIR = $(TEST_DIR)/emu
 # Support files to be ignored when scanning for tests
 TEST_EMU_SUPPORT = $(TEST_EMU_DIR)/platform.inc $(TEST_EMU_DIR)/.gitignore
 
-TEST_EMU_MAX_CYCLES = 1000
+TEST_EMU_MAX_CYCLES = 10000
 
 TEST_OUT_DIR = test_out
 TEST_EMU_OUT_DIR = $(TEST_OUT_DIR)/emu
@@ -73,14 +73,18 @@ $(TARGETS): $(OUT_DIR)/%: $$(call gettgtobjs,$$*) | $(OUT_DIR)
 	$(CC) $(COPTS) $^ -o $@
 
 $(TEST_EMU_OUT_DIR)/%_out.bin: $(TEST_EMU_OUT_DIR)/%_rom.bin out/mollusc-emu | $(TEST_EMU_OUT_DIR)
-	out/mollusc-emu $< -c $(TEST_EMU_MAX_CYCLES)
+	out/mollusc-emu $< -c $(TEST_EMU_MAX_CYCLES) > $@ 2> $(TEST_EMU_OUT_DIR)/$*_trace.txt
 
 $(EMU_TESTS): test_emu_%: $(TEST_EMU_OUT_DIR)/%_out.bin $(TEST_EMU_OUT_DIR)/%_verify.bin
-	cmp $^
+	@cmp $^ || (echo "Emulator test $* failed" && exit 255)
+	@echo "Emulator test $* passed"
 
 # Temporary until linker works
 $(TEST_EMU_OUT_DIR)/%_rom.bin: $(TEST_EMU_DIR)/%/main.s out/as | $(TEST_EMU_OUT_DIR)
 	out/as $< -o $@
+
+$(TEST_EMU_OUT_DIR)/%_verify.bin: $(TEST_EMU_DIR)/%/reference.py | $(TEST_EMU_OUT_DIR)
+	python3 $< > $@
 
 $(DIRS): %:
 	mkdir -p $@

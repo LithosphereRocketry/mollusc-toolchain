@@ -26,9 +26,7 @@ void link_section(struct bin_section* section) {
                     //     reloc_err("Relocation out of range", "todo", 0, target, reloc);
                     //     exit
                     // }
-                    printf("data before: %08x\n", section->data[reloc->offset]);
                     section->data[reloc->offset] |= offs_trimmed;
-                    printf("data after: %08x\n", section->data[reloc->offset]);
                 } else {
                     printf("Can't find label %s, skipping\n", reloc->symbol);
                     continue;

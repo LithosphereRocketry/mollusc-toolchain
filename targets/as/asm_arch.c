@@ -76,6 +76,9 @@ static bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
 static bool assemble_rd(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 24);
 }
+static bool assemble_rm(struct bin_section* res, size_t offs, const char* arg) {
+    return assemble_reg(res, offs, arg, 16);
+}
 static bool assemble_ra(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 12);
 }
@@ -114,6 +117,14 @@ static bool assemble_immj(struct bin_section* res, size_t offs, const char* arg)
     }
 }
 
+static bool assemble_immlui(struct bin_section* res, size_t offs, const char* arg) {
+    char* endstr;
+    long val = strtol(arg, &endstr, 0);
+    if(*endstr != '\0') return false;
+    res->data[offs] |= val >> 10;
+    return true;
+}
+
 static bool assemble_rbi(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_rb(res, offs, arg) || assemble_imm10(res, offs, arg);
 }
@@ -122,13 +133,18 @@ static const assemble_arg_t argmap_type_r[] =
         {assemble_rd, assemble_ra, assemble_rbi, NULL};
 static const assemble_arg_t argmap_type_c[] = 
         {assemble_pd, assemble_ra, assemble_rbi, NULL};
-
+static const assemble_arg_t argmap_type_m[] = 
+        {assemble_rm, assemble_ra, assemble_rbi, NULL};
+        
 static const assemble_arg_t argmap_j[] =
         {assemble_rd, assemble_immj, NULL};
 
+static const assemble_arg_t argmap_lui[] = 
+        {assemble_rd, assemble_immlui, NULL};
+
 const assemble_arg_t* arch_arguments[] = {
     [I_J] =     argmap_j,
-    [I_LUI] =   NULL,
+    [I_LUI] =   argmap_lui,
     [I_AUIPC] = NULL,
     [I_ADD] =   argmap_type_r,
     [I_SUB] =   argmap_type_r,
@@ -143,6 +159,6 @@ const assemble_arg_t* arch_arguments[] = {
     [I_EQ] =    argmap_type_c,
     [I_BIT] =   argmap_type_c,
     [I_LDP] =   NULL,
-    [I_STP] =   NULL,
+    [I_STP] =   argmap_type_m,
     [I_JX] =    argmap_type_r
 };

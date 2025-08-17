@@ -23,7 +23,7 @@ void assemble_section(void* global, const char* name, void* value) {
 void print_destroy_asm_section(void* global, const char* name, void* res) {
     (void) global, (void) name;
     printf("Assembly for section \"%s\":\n", name);
-    print_assembly(res);
+    // print_assembly(res);
     destroy_assembly(res);
 }
 

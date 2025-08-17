@@ -3,14 +3,14 @@
 
 #include <stddef.h>
 #include "structures.h"
-#include "arch.h"
+#include "asm_pseudo.h"
 
 struct parse_instr {
     const char* file;
     size_t line;
     bool pred_inv;
     const char* pred;
-    enum arch_instr type;
+    enum arch_pseudoinstr type;
     struct heap_list args;
 };
 

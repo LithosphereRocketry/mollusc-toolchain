@@ -19,7 +19,6 @@ static void arg_err(const char* message, const argument_t* arg) {
 }
 
 static size_t max_cycles; // stop after N instructions
-static const size_t mem_size_wds = 1 << 18; // 1MB ram
 
 uint32_t signExtend(uint32_t value, uint32_t bits) {
 	uint32_t mask = ~((1 << bits) - 1);
@@ -30,43 +29,113 @@ uint32_t signExtend(uint32_t value, uint32_t bits) {
 	}
 }
 
+enum mem_type {
+    MEM_LOWONLY
+};
+
 struct cpu_state {
+    enum mem_type mtype;
     uint32_t regs[16];
     uint32_t pc;
     uint8_t pred;
-    uint32_t* mem;
+    union {
+        struct {
+            uint32_t ram[8192];
+            uint32_t rom[8192];
+        } mem_lowonly;
+    } mem;
 } state;
 
-void print_state(const struct cpu_state* state) {
-    printf("%08x : %08x (%s)\tpred: ", state->pc, state->mem[state->pc >> 2],
-            arch_mnemonics[arch_identify(state->mem + (state->pc >> 2))]);
-    for(size_t i = 0; i < 8; i++) putchar((state->pred & (1 << i)) ? '1' : '0');
+void init(struct cpu_state* state, const char* fdata, size_t len) {
+    switch(state->mtype) {
+        case MEM_LOWONLY:
+            state->pc = 0x8000;
+            if(len > 0x8000) {
+                fprintf(stderr, "ROM image too large for memory (got %zu bytes)\n", len);
+                exit(-1);
+            }
+            memcpy(state->mem.mem_lowonly.rom, fdata, len);
+            break;
+    }
+}
+
+uint32_t load(struct cpu_state* state, uint32_t addr) {
+    if((addr & 0x3) != 0) {
+        fprintf(stderr, "Attempted load with misaligned address (%08x)\n", addr);
+        exit(-1);
+    }
+    switch(state->mtype) {
+        case MEM_LOWONLY:
+            if(addr < 0x8000) {
+                return state->mem.mem_lowonly.ram[addr >> 2];
+            } else if(addr < 0x10000) {
+                return state->mem.mem_lowonly.rom[(addr - 0x8000) >> 2];
+            } else {
+                fprintf(stderr, "Attempted load out of bounds (%08x)\n", addr);
+                exit(-1);
+            }
+            break;
+        default:
+            fprintf(stderr, "Got unexpected memory type %i\n", state->mtype);
+            exit(-1);
+    };
+}
+
+void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
+    if((addr & 0x3) != 0) {
+        fprintf(stderr, "Attempted load with misaligned address (%08x)\n", addr);
+        exit(-1);
+    }
+    switch(state->mtype) {
+        case MEM_LOWONLY:
+            if(addr < 32768) {
+                state->mem.mem_lowonly.ram[addr >> 2] = data;
+            } else if(addr < 65536) {
+                state->mem.mem_lowonly.rom[addr >> 2] = data;
+            } else if(addr == 0x01000000) {
+                putchar(data & 0xFF);
+            } else if(addr == 0x01001000) {
+                fprintf(stderr, "Terminating with code %i\n", (int) data);
+                exit(data);
+            } else {
+                fprintf(stderr, "Attempted load out of bounds (%08x)\n", addr);
+                exit(-1);
+            }
+            break;
+    };
+}
+
+void print_state(struct cpu_state* state) {
+    const arch_word_t instr = load(state, state->pc);
+    // Note, this relies on MOLLUSC instructions being fixed width
+    fprintf(stderr, "%08x : %08x (%s)\tpred: ", state->pc, instr, arch_mnemonics[arch_identify(&instr)]);
+    for(size_t i = 0; i < 8; i++) putc((state->pred & (1 << i)) ? '1' : '0', stderr);
     for(size_t row = 0; row < 4; row ++) {
-        putchar('\n');
+        putc('\n', stderr);
         for(size_t i = row; i < row + 16; i += 4) {
-            if(i < 10) putchar(' ');
-            printf("r%zu:%08x\t", i, state->regs[i]);
+            if(i < 10) putc(' ', stderr);
+            fprintf(stderr, "%zu %4s:%08x\t", i, arch_regnames[i], state->regs[i]);
         }
     }
-    putchar('\n');
+    putc('\n', stderr);
 }
 
 void step(struct cpu_state* state) {
-    uint32_t instr = state->mem[state->pc >> 2];
+    uint32_t instr = load(state, state->pc);
     uint32_t pred = instr >> 28;
     uint32_t rp = pred & 0b111;
     uint32_t inv = pred >> 3;
     if((((state->pred >> rp) ^ inv) & 1) == 0) {
         if((instr & 0x00C00000) == 0x00C00000) { // auipc
-            printf("Unsupported instruction %08x\n", instr);
+            fprintf(stderr, "Unsupported instruction %08x\n", instr);
             exit(-1);
         } else if((instr & 0x00C00000) == 0x00800000) { // lui
-            printf("Unsupported instruction %08x\n", instr);
-            exit(-1);
+            int rd = (instr >> 24) & 0xF;
+            if(rd != 0) state->regs[rd] = instr << 10;
+            state->pc += 4;
         } else if((instr & 0x00C00000) == 0x00400000) { // j
             int rd = (instr >> 24) & 0xF;
             if(rd != 0) state->regs[rd] = state->pc+4;
-            printf("jump by %d\n", signExtend(instr, 22) << 2);
             state->pc += signExtend(instr, 22) << 2;
         } else { // register instrs
             int ra = (instr >> 12) & 0xF;
@@ -74,8 +143,16 @@ void step(struct cpu_state* state) {
             uint32_t a = state->regs[ra];
             uint32_t b = (instr & 0x400) ? signExtend(instr, 10) : state->regs[rb];
             if((instr & 0x00300800) == 0x00300800) { // store
-                printf("Unsupported instruction %08x\n", instr);
-                exit(-1);
+                int rm = (instr >> 16) & 0xF;
+                uint32_t m = state->regs[rm];
+                switch((instr >> 24) & 0xF) {
+                    case 0x0: store(state, a + b, m); break;
+                    default:
+                        fprintf(stderr, "Unsupported instruction %08x\n", instr);
+                        exit(-1);
+                        break;
+                }
+                state->pc += 4;
             } else if((instr & 0x00300800) == 0x00200000) { // comparison
                 int pd = (instr >> 24) & 0x7;
                 int pinv = (instr >> 27) & 1;
@@ -86,10 +163,11 @@ void step(struct cpu_state* state) {
                     case 0x2: res = a == b ? 1 : 0; break;
                     case 0x3: res = a & (1 << b) ? 1 : 0; break;
                     default:
-                        printf("Unsupported instruction %08x\n", instr);
+                        fprintf(stderr, "Unsupported instruction %08x\n", instr);
                         exit(-1);
                         break;
                 }
+                fprintf(stderr, "pd: %i pinv: %i res: %i", pd, pinv, res);
                 if(pd) {
                     state->pred &= ~(1 << pd);
                     state->pred |= (res ^ pinv) << pd;
@@ -106,20 +184,18 @@ void step(struct cpu_state* state) {
                             state->pc = a + b;
                             break;
                         default:
-                            printf("Unsupported instruction %08x\n", instr);
+                            fprintf(stderr, "Unsupported instruction %08x\n", instr);
                             exit(-1);
                             break;
                     }
                 } else { // normal arithmetic
                     switch(instr & 0x001F0800) {
-                        case 0x00000000: // add
-                            res = a + b;
-                            break;
-                        case 0x00010000: // sub
-                            res = a - b;
-                            break;
+                        case 0x00000000: res = a + b; break; // add
+                        case 0x00010000: res = a - b; break; // sub
+                        case 0x00020000: res = a & b; break; // and
+                        case 0x00060000: res = a >> b; break;
                         default:
-                            printf("Unsupported instruction %08x\n", instr);
+                            fprintf(stderr, "Unsupported instruction %08x\n", instr);
                             exit(-1);
                     }
                     state->pc += 4;
@@ -128,7 +204,7 @@ void step(struct cpu_state* state) {
             }
         }
     } else {
-        printf("predicate denied %i\n", (((state->pred >> rp) ^ inv) & 1) == 0);
+        fprintf(stderr, "predicate denied %i\n", (((state->pred >> rp) ^ inv) & 1) == 0);
         state->pc += 4;
     }
 }
@@ -163,10 +239,7 @@ int main(int argc, char** argv) {
         exit(-1);
     }
     char* filebin = fread_dup(file);
-    
-    state.mem = malloc(mem_size_wds * sizeof(uint32_t));
-    memcpy(state.mem, filebin, ftell(file));
-    printf("%lx\n", ftell(file));
+    init(&state, filebin, ftell(file));
     free(filebin);
     fclose(file);
 

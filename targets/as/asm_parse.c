@@ -114,7 +114,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             sm_put(&current_section->instr_labels, name, (void*) current_section->instrs.len);
             free(name);
             text = nextpos+1;
-        } else if((nextpos = asm_parse_instr(fn, lineno, text, current_section))) {
+        } else if(current_section && (nextpos = asm_parse_instr(fn, lineno, text, current_section))) {
             text = nextpos;
             line_full = true;
         } else {
