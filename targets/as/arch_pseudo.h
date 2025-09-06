@@ -1,5 +1,5 @@
-#ifndef ASM_PSEUDO_H
-#define ASM_PSEUDO_H
+#ifndef ARCH_PSEUDO_H
+#define ARCH_PSEUDO_H
 
 #include "arch.h"
 
@@ -11,7 +11,11 @@
 // However, only arch_instr may be emitted in binary or will be considered in
 // emulation
 enum arch_pseudoinstr {
-    PI_LA = N_INSTRS,
+    // General purpose
+    PI_ASCII = N_INSTRS,
+    PI_ASCIZ,
+    // Architecture specific
+    PI_LR,
     N_PSEUDOINSTRS
 };
 

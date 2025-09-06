@@ -56,7 +56,7 @@ bool assemble_predicate(struct bin_section* res, size_t offs, const char* arg, b
         return true;
     }
 }
-static bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
+bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
     bool invert = false;
     if(*arg == '!') {
         invert = true;
@@ -73,13 +73,13 @@ static bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
         return true;
     }
 }
-static bool assemble_rd(struct bin_section* res, size_t offs, const char* arg) {
+bool assemble_rd(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 24);
 }
-static bool assemble_rm(struct bin_section* res, size_t offs, const char* arg) {
+bool assemble_rm(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 16);
 }
-static bool assemble_ra(struct bin_section* res, size_t offs, const char* arg) {
+bool assemble_ra(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 12);
 }
 static bool assemble_rb(struct bin_section* res, size_t offs, const char* arg) {
@@ -112,6 +112,7 @@ static bool assemble_immj(struct bin_section* res, size_t offs, const char* arg)
             return false;
         }
     } else {
+        (void) val;
         printf("Numbered jumps not yet supported\n");
         return false;
     }
@@ -125,7 +126,7 @@ static bool assemble_immlui(struct bin_section* res, size_t offs, const char* ar
     return true;
 }
 
-static bool assemble_rbi(struct bin_section* res, size_t offs, const char* arg) {
+bool assemble_rbi(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_rb(res, offs, arg) || assemble_imm10(res, offs, arg);
 }
 
@@ -145,7 +146,7 @@ static const assemble_arg_t argmap_lui[] =
 const assemble_arg_t* arch_arguments[] = {
     [I_J] =     argmap_j,
     [I_LUI] =   argmap_lui,
-    [I_AUIPC] = NULL,
+    [I_LUR] = NULL,
     [I_ADD] =   argmap_type_r,
     [I_SUB] =   argmap_type_r,
     [I_AND] =   argmap_type_r,
@@ -158,7 +159,7 @@ const assemble_arg_t* arch_arguments[] = {
     [I_LT] =    argmap_type_c,
     [I_EQ] =    argmap_type_c,
     [I_BIT] =   argmap_type_c,
-    [I_LDP] =   NULL,
+    [I_LDP] =   argmap_type_r,
     [I_STP] =   argmap_type_m,
     [I_JX] =    argmap_type_r
 };

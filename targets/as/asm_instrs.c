@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "arch.h"
-#include "asm_pseudo.h"
+#include "arch_pseudo.h"
 #include "structures.h"
 #include "strtools.h"
 

@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "misctools.h"
 #include "argparse.h"
 #include "iotools.h"
-#include "string.h"
 #include "arch_disasm.h"
 
 argument_t arg_cycles = {'c', "max-cycles", true, {NULL}};
+argument_t arg_trace = {'t', "trace", true, {NULL}};
 
 argument_t* args[] = {
-    &arg_cycles
+    &arg_cycles,
+    &arg_trace
 };
 
 static void arg_err(const char* message, const argument_t* arg) {
@@ -19,15 +22,6 @@ static void arg_err(const char* message, const argument_t* arg) {
 }
 
 static size_t max_cycles; // stop after N instructions
-
-uint32_t signExtend(uint32_t value, uint32_t bits) {
-	uint32_t mask = ~((1 << bits) - 1);
-	if(value & (1 << (bits-1))) {
-		return value | mask;
-	} else {
-		return value & ~mask;
-	}
-}
 
 enum mem_type {
     MEM_LOWONLY
@@ -81,6 +75,7 @@ uint32_t load(struct cpu_state* state, uint32_t addr) {
     };
 }
 
+FILE* tracefile = NULL;
 void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
     if((addr & 0x3) != 0) {
         fprintf(stderr, "Attempted load with misaligned address (%08x)\n", addr);
@@ -99,25 +94,27 @@ void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
                 exit(data);
             } else {
                 fprintf(stderr, "Attempted load out of bounds (%08x)\n", addr);
+                // todo inelegant hack to make sure everything is closed
+                if(tracefile) fclose(tracefile);
                 exit(-1);
             }
             break;
     };
 }
 
-void print_state(struct cpu_state* state) {
+void print_state(FILE* f, struct cpu_state* state) {
     const arch_word_t instr = load(state, state->pc);
     // Note, this relies on MOLLUSC instructions being fixed width
-    fprintf(stderr, "%08x : %08x (%s)\tpred: ", state->pc, instr, arch_mnemonics[arch_identify(&instr)]);
-    for(size_t i = 0; i < 8; i++) putc((state->pred & (1 << i)) ? '1' : '0', stderr);
+    fprintf(f, "%08x : %08x (%s)\tpred: ", state->pc, instr, arch_mnemonics[arch_identify(&instr)]);
+    for(size_t i = 0; i < 8; i++) putc((state->pred & (1 << i)) ? '1' : '0', f);
     for(size_t row = 0; row < 4; row ++) {
-        putc('\n', stderr);
+        putc('\n', f);
         for(size_t i = row; i < row + 16; i += 4) {
-            if(i < 10) putc(' ', stderr);
-            fprintf(stderr, "%zu %4s:%08x\t", i, arch_regnames[i], state->regs[i]);
+            if(i < 10) putc(' ', f);
+            fprintf(f, "%zu %4s:%08x\t", i, arch_regnames[i], state->regs[i]);
         }
     }
-    putc('\n', stderr);
+    putc('\n', f);
 }
 
 void step(struct cpu_state* state) {
@@ -126,9 +123,11 @@ void step(struct cpu_state* state) {
     uint32_t rp = pred & 0b111;
     uint32_t inv = pred >> 3;
     if((((state->pred >> rp) ^ inv) & 1) == 0) {
-        if((instr & 0x00C00000) == 0x00C00000) { // auipc
-            fprintf(stderr, "Unsupported instruction %08x\n", instr);
-            exit(-1);
+        if((instr & 0x00C00000) == 0x00C00000) { // lur
+            int rd = (instr >> 24) & 0xF;
+            uint32_t offs = instr << 10;
+            if(rd != 0) state->regs[rd] = state->pc + offs;
+            state->pc += 4;
         } else if((instr & 0x00C00000) == 0x00800000) { // lui
             int rd = (instr >> 24) & 0xF;
             if(rd != 0) state->regs[rd] = instr << 10;
@@ -167,7 +166,6 @@ void step(struct cpu_state* state) {
                         exit(-1);
                         break;
                 }
-                fprintf(stderr, "pd: %i pinv: %i res: %i", pd, pinv, res);
                 if(pd) {
                     state->pred &= ~(1 << pd);
                     state->pred |= (res ^ pinv) << pd;
@@ -176,7 +174,16 @@ void step(struct cpu_state* state) {
             } else {
                 int rd = (instr >> 24) & 0xF;
                 uint32_t res;
-                if((instr & 0x00300800) == 0x00200800) { // jx, misc
+                if((instr & 0x00300800) == 0x00300000) { // load
+                    switch((instr >> 16) & 0xF) {
+                        case 0x0: res = load(state, a + b); break;
+                        default:
+                            fprintf(stderr, "Unsupported instruction %08x\n", instr);
+                            exit(-1);
+                            break;
+                    }
+                    state->pc += 4;
+                } else if((instr & 0x00300800) == 0x00200800) { // jx, misc
                     int fcode = (instr >> 16) & 0xF;
                     switch(fcode) {
                         case 0x0: // jx
@@ -204,7 +211,6 @@ void step(struct cpu_state* state) {
             }
         }
     } else {
-        fprintf(stderr, "predicate denied %i\n", (((state->pred >> rp) ^ inv) & 1) == 0);
         state->pc += 4;
     }
 }
@@ -221,6 +227,14 @@ int main(int argc, char** argv) {
         }
     }
 
+    if(arg_trace.result.value) {
+        tracefile = fopen(arg_trace.result.value, "w");
+        if(!tracefile) {
+            arg_err("Could not open file", &arg_trace);
+            exit(-1);
+        }
+    }
+
     if(argc <= 1) {
         fprintf(stderr, "No file given!\n");
         exit(-1);
@@ -231,6 +245,8 @@ int main(int argc, char** argv) {
     
     state.pred &= 0b11111110;
     state.regs[0] = 0;
+    for(size_t i = 1; i < 16; i++) state.regs[i] = 0xDEADBEEF;
+    memset(state.mem.mem_lowonly.ram, 0xEF, 0x8000);
 
     char* filename = argv[1];
     FILE* file = fopen(filename, "rb");
@@ -244,7 +260,9 @@ int main(int argc, char** argv) {
     fclose(file);
 
     for(size_t i = 0; i < max_cycles || max_cycles == 0; i++) {
-        print_state(&state);
+        if(tracefile) print_state(tracefile, &state);
         step(&state);
     }
+
+    if(tracefile) fclose(tracefile);
 }

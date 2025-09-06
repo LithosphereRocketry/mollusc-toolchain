@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include "structures.h"
-#include "asm_pseudo.h"
+#include "arch_pseudo.h"
 
 struct parse_instr {
     const char* file;

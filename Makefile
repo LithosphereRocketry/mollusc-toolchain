@@ -72,14 +72,16 @@ patcard = $(info $1) $(patsubst %.c,%.o,$(wildcard $(1)))
 $(TARGETS): $(OUT_DIR)/%: $$(call gettgtobjs,$$*) | $(OUT_DIR)
 	$(CC) $(COPTS) $^ -o $@
 
-$(TEST_EMU_OUT_DIR)/%_out.bin: $(TEST_EMU_OUT_DIR)/%_rom.bin out/mollusc-emu | $(TEST_EMU_OUT_DIR)
-	out/mollusc-emu $< -c $(TEST_EMU_MAX_CYCLES) > $@ 2> $(TEST_EMU_OUT_DIR)/$*_trace.txt
+.DELETE_ON_ERROR:
+$(TEST_EMU_OUT_DIR)/%_out.bin: $(TEST_EMU_OUT_DIR)/%_rom.bin out/emu | $(TEST_EMU_OUT_DIR)
+	out/emu $< -c $(TEST_EMU_MAX_CYCLES) -t $(TEST_EMU_OUT_DIR)/$*_trace.txt > $@ 
 
 $(EMU_TESTS): test_emu_%: $(TEST_EMU_OUT_DIR)/%_out.bin $(TEST_EMU_OUT_DIR)/%_verify.bin
 	@cmp $^ || (echo "Emulator test $* failed" && exit 255)
 	@echo "Emulator test $* passed"
 
 # Temporary until linker works
+.PRECIOUS: $(TEST_EMU_OUT_DIR)/%_rom.bin
 $(TEST_EMU_OUT_DIR)/%_rom.bin: $(TEST_EMU_DIR)/%/main.s out/as | $(TEST_EMU_OUT_DIR)
 	out/as $< -o $@
 
@@ -90,6 +92,6 @@ $(DIRS): %:
 	mkdir -p $@
 
 clean:
-	rm -rf $(DEPS) $(OBJS) $(GENSRCS) $(ASSEMBLY_EXS_PREPROCESS) $(TEST_OUT_DIR)
+	rm -rf $(DEPS) $(OBJS) $(GENSRCS) $(ASSEMBLY_EXS_PREPROCESS) $(OUT_DIR) $(TEST_OUT_DIR)
 
 -include $(DEPS)

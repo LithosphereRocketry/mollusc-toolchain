@@ -12,7 +12,7 @@ enum arch_instr {
     I_INVALID = (size_t) NULL, // make sure (int) nullptr always maps to an error
     I_J,
     I_LUI,
-    I_AUIPC,
+    I_LUR,
     I_ADD,
     I_SUB,
     I_AND,
@@ -62,7 +62,9 @@ enum arch_register {
 };
 
 enum reloc_type {
-    RELOC_J_REL
+    RELOC_J_REL,
+    RELOC_LUR_REL,
+    RELOC_IMM_REL
 };
 
 struct relocation {

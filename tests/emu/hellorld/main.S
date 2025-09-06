@@ -1,7 +1,7 @@
 .section text
 
     j ra, init
-    la hellorld
+    lr a0, hellorld
     j ra, puts
     add a0, zero, zero
     j ra, exit
@@ -21,11 +21,13 @@ puts_loop:
     add zero, zero, zero
 puts_shiftloop:
     and a0, s3, 0xFF
-!a0 j zero, puts_done
+    eq p1, a0, zero
+?p1 j zero, puts_done
     j ra, putc
     sub s4, s4, 1
     sr s3, s3, 8
-?s4 j zero, puts_shiftloop
+    eq p1, s4, zero
+!p1 j zero, puts_shiftloop
     add s2, s2, 4
     j zero, puts_loop
 
@@ -39,3 +41,6 @@ puts_done:
 
 hellorld:
 .asciz "Hellorld!\n"
+
+#include "../platform.inc"
+

@@ -5,8 +5,8 @@
 // this or is it more valuable to dedup instruction logic within the emulator?
 enum arch_instr arch_identify(const arch_word_t* location) {
     arch_word_t instr = *location;
-    if((instr & 0x00C00000) == 0x00C00000) { // auipc
-        return I_AUIPC;
+    if((instr & 0x00C00000) == 0x00C00000) { // lur
+        return I_LUR;
     } else if((instr & 0x00C00000) == 0x00800000) { // lui
         return I_LUI;
     } else if((instr & 0x00C00000) == 0x00400000) { // j
