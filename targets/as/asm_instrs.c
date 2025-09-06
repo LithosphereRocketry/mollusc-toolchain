@@ -54,7 +54,15 @@ const char* asm_parse_instr(const char* file, size_t line,
     ins->args = hl_make();
 
     text = mnem_end;
+    // todo: this is a slightly hacky way to handle comments and probably could
+    // be done better
     const char* line_end = eol(text);
+    for(const char* p = text; p < line_end; p++) {
+        if(*p == ';') {
+            line_end = p;
+            break;
+        }
+    }
     while(1) {
         const char* next_comma = strchr(text, ',');
         if(!next_comma || next_comma > line_end) next_comma = line_end;

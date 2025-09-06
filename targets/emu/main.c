@@ -102,10 +102,17 @@ void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
     };
 }
 
+#define DIS_BUF_SZ 64
 void print_state(FILE* f, struct cpu_state* state) {
+    static char dis_buf[DIS_BUF_SZ]; // should be plenty for any instruction we expect
+
     const arch_word_t instr = load(state, state->pc);
     // Note, this relies on MOLLUSC instructions being fixed width
-    fprintf(f, "%08x : %08x (%s)\tpred: ", state->pc, instr, arch_mnemonics[arch_identify(&instr)]);
+    if(!arch_disasm(dis_buf, DIS_BUF_SZ, &instr)) {
+        fprintf(stderr, "Disassembly of instruction failed (%08x)\n", instr);
+        exit(-1);
+    }
+    fprintf(f, "%08x : %08x (%s)\tpred: ", state->pc, instr, dis_buf);
     for(size_t i = 0; i < 8; i++) putc((state->pred & (1 << i)) ? '1' : '0', f);
     for(size_t row = 0; row < 4; row ++) {
         putc('\n', f);
