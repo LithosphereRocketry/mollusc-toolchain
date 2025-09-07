@@ -114,10 +114,42 @@ static char* disasm_type_m(char* buf, size_t len, const arch_word_t* instr) {
     return buf+len;
 }
 
+static char* disasm_j(char* buf, size_t len, const arch_word_t* instr) {
+    int chars;
+    int offset = signExtend(*instr, 22) << 2;
+    snprintf(buf, len, "%s %s, %c0x%x%n", arch_mnemonics[arch_identify(instr)],
+            arch_regnames[(*instr >> 24) & 0xF],
+            (offset >= 0) ? '+' : '-',
+            (offset >= 0) ? offset : -offset,
+            &chars);
+    return buf+len;
+}
+
+static char* disasm_lui(char* buf, size_t len, const arch_word_t* instr) {
+    int chars;
+    snprintf(buf, len, "%s %s, 0x%x%n", arch_mnemonics[arch_identify(instr)],
+            arch_regnames[(*instr >> 24) & 0xF],
+            *instr << 10,
+            &chars);
+    return buf+len;
+}
+
+static char* disasm_lur(char* buf, size_t len, const arch_word_t* instr) {
+    int chars;
+    int offset = *instr << 10;
+    snprintf(buf, len, "%s %s, %c0x%x%n", arch_mnemonics[arch_identify(instr)],
+            arch_regnames[(*instr >> 24) & 0xF],
+            (offset >= 0) ? '+' : '-',
+            (offset >= 0) ? offset : -offset,
+            &chars);
+    return buf+len;
+}
+
+
 static const disasm_t disasm_funcs[N_INSTRS] = {
-    // [I_J] =     argmap_j,
-    // [I_LUI] =   argmap_lui,
-    [I_LUR] = NULL,
+    [I_J] =     disasm_j,
+    [I_LUI] =   disasm_lui,
+    [I_LUR] =   disasm_lur,
     [I_ADD] =   disasm_type_r,
     [I_SUB] =   disasm_type_r,
     [I_AND] =   disasm_type_r,
@@ -141,6 +173,13 @@ char* arch_disasm(char* buf, size_t len, const arch_word_t* instr) {
         int chars;
         snprintf(buf, len, "%s%n", "[unknown]", &chars);
         return buf+len;
+    }
+    if(*instr & 0xF0000000) {
+        int chars;
+        snprintf(buf, len, "%c%s %n", (*instr & 0x80000000) ? '!' : '?', 
+                arch_prednames[(*instr >> 28) & 0x7], &chars);
+        buf += chars;
+        len -= chars;
     }
     disasm_t disfunc = disasm_funcs[type];
     if(!disfunc) {
