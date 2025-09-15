@@ -81,14 +81,14 @@ static char* disasm_type_c(char* buf, size_t len, const arch_word_t* instr) {
     if(*instr & 0x400) {
         snprintf(buf, len, "%s %s%s, %s, %i%n", arch_mnemonics[arch_identify(instr)],
                 (*instr & 0x08000000) ? "!" : "",
-                arch_prednames[(*instr >> 16) & 0x7],
+                arch_prednames[(*instr >> 24) & 0x7],
                 arch_regnames[(*instr >> 12) & 0xF],
                 (int) signExtend(*instr, 10),
                 &chars);
     } else {
         snprintf(buf, len, "%s %s%s, %s, %s%n", arch_mnemonics[arch_identify(instr)],
                 (*instr & 0x08000000) ? "!" : "",
-                arch_prednames[(*instr >> 16) & 0x7],
+                arch_prednames[(*instr >> 24) & 0x7],
                 arch_regnames[(*instr >> 12) & 0xF],
                 arch_regnames[*instr & 0xF],
                 &chars);
@@ -176,7 +176,7 @@ char* arch_disasm(char* buf, size_t len, const arch_word_t* instr) {
     }
     if(*instr & 0xF0000000) {
         int chars;
-        snprintf(buf, len, "%c%s %n", (*instr & 0x80000000) ? '!' : '?', 
+        snprintf(buf, len, "%c%s %n", (*instr & 0x80000000) ? '?' : '!', 
                 arch_prednames[(*instr >> 28) & 0x7], &chars);
         buf += chars;
         len -= chars;

@@ -106,6 +106,13 @@ void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
 void print_state(FILE* f, struct cpu_state* state) {
     static char dis_buf[DIS_BUF_SZ]; // should be plenty for any instruction we expect
 
+    for(size_t row = 0; row < 4; row ++) {
+        for(size_t i = row; i < row + 16; i += 4) {
+            if(i < 10) putc(' ', f);
+            fprintf(f, "%zu %4s:%08x\t", i, arch_regnames[i], state->regs[i]);
+        }
+        putc('\n', f);
+    }
     const arch_word_t instr = load(state, state->pc);
     // Note, this relies on MOLLUSC instructions being fixed width
     if(!arch_disasm(dis_buf, DIS_BUF_SZ, &instr)) {
@@ -114,13 +121,6 @@ void print_state(FILE* f, struct cpu_state* state) {
     }
     fprintf(f, "%08x : %08x (%s)\tpred: ", state->pc, instr, dis_buf);
     for(size_t i = 0; i < 8; i++) putc((state->pred & (1 << i)) ? '1' : '0', f);
-    for(size_t row = 0; row < 4; row ++) {
-        putc('\n', f);
-        for(size_t i = row; i < row + 16; i += 4) {
-            if(i < 10) putc(' ', f);
-            fprintf(f, "%zu %4s:%08x\t", i, arch_regnames[i], state->regs[i]);
-        }
-    }
     putc('\n', f);
 }
 
@@ -163,16 +163,18 @@ void step(struct cpu_state* state) {
                 int pd = (instr >> 24) & 0x7;
                 int pinv = (instr >> 27) & 1;
                 int res;
+                // printf("Comparing %u to %u with %u\n", a, b, (instr >> 16) & 0xF);
                 switch((instr >> 16) & 0xF) {
-                    case 0x0: res = a > b ? 1 : 0; break;
-                    case 0x1: res = (int16_t) a > (int16_t) b ? 1 : 0; break;
-                    case 0x2: res = a == b ? 1 : 0; break;
-                    case 0x3: res = a & (1 << b) ? 1 : 0; break;
+                    case 0x0: res = (a < b) ? 1 : 0; break;
+                    case 0x1: res = ((int16_t) a < (int16_t) b) ? 1 : 0; break;
+                    case 0x2: res = (a == b) ? 1 : 0; break;
+                    case 0x3: res = (a & (1 << b)) ? 1 : 0; break;
                     default:
                         fprintf(stderr, "Unsupported instruction %08x\n", instr);
                         exit(-1);
                         break;
                 }
+                // printf("res %i\n", res);
                 if(pd) {
                     state->pred &= ~(1 << pd);
                     state->pred |= (res ^ pinv) << pd;

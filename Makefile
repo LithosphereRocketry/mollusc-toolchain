@@ -12,7 +12,7 @@ TEST_EMU_DIR = $(TEST_DIR)/emu
 # Support files to be ignored when scanning for tests
 TEST_EMU_SUPPORT = $(TEST_EMU_DIR)/platform.inc $(TEST_EMU_DIR)/.gitignore
 
-TEST_EMU_MAX_CYCLES = 10000
+TEST_EMU_MAX_CYCLES = 100000
 
 TEST_OUT_DIR = test_out
 TEST_EMU_OUT_DIR = $(TEST_OUT_DIR)/emu

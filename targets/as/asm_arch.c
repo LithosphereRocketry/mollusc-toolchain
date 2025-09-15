@@ -69,6 +69,7 @@ bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
         return false;
     } else {
         if(invert) reg |= 1<<3;
+        printf("%zu", reg);
         res->data[offs] |= reg << 24;
         return true;
     }
@@ -122,7 +123,9 @@ static bool assemble_immlui(struct bin_section* res, size_t offs, const char* ar
     char* endstr;
     long val = strtol(arg, &endstr, 0);
     if(*endstr != '\0') return false;
-    res->data[offs] |= val >> 10;
+    // Make sure lui ##; add ## rounds in the correct direction to account for
+    // sign extension
+    res->data[offs] |= (val + 0x200) >> 10;
     return true;
 }
 
