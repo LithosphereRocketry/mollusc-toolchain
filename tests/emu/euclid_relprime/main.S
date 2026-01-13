@@ -26,9 +26,9 @@ relprime_loop:
 ?p1 add s3, s3, 1   ;     m++;
 ?p1 j zero, relprime_loop ;   }
     add a0, zero, s3
-    ldp ra, sp, 0
-    ldp s2, sp, 4
-    ldp s3, sp, 8
+    ld ra, sp, 0
+    ld s2, sp, 4
+    ld s3, sp, 8
     jx zero, zero, ra ;   return m; }
 
 gcd: ; int gcd(int a, int b) {

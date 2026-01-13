@@ -40,7 +40,7 @@ enum arch_instr arch_identify(const arch_word_t* location) {
             } else if((instr & 0x00300800) == 0x00300000) { // loads
                 int fcode = (instr >> 16) & 0xF;
                 switch (fcode) {
-                    case 0x0: return I_LDP;
+                    case 0x0: return I_LD;
                     default: return I_INVALID;
                 }
             } else { // normal arithmetic
@@ -162,7 +162,7 @@ static const disasm_t disasm_funcs[N_INSTRS] = {
     [I_LT] =    disasm_type_c,
     [I_EQ] =    disasm_type_c,
     [I_BIT] =   disasm_type_c,
-    [I_LDP] =   disasm_type_r,
+    [I_LD] =   disasm_type_r,
     [I_STP] =   disasm_type_m,
     [I_JX] =    disasm_type_r
 };

@@ -25,7 +25,7 @@ enum arch_instr {
     I_LT,
     I_EQ,
     I_BIT,
-    I_LDP,
+    I_LD,
     I_STP,
     I_JX,
     N_INSTRS

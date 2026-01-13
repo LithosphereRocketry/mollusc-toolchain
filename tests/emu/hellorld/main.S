@@ -17,7 +17,7 @@ puts:
 
 puts_loop:
     add s4, zero, 4
-    ldp s3, s2, zero
+    ld s3, s2, zero
     add zero, zero, zero
 puts_shiftloop:
     and a0, s3, 0xFF
@@ -32,10 +32,10 @@ puts_shiftloop:
     j zero, puts_loop
 
 puts_done:
-    ldp ra, sp, 0
-    ldp s2, sp, 4
-    ldp s3, sp, 8
-    ldp s4, sp, 12
+    ld ra, sp, 0
+    ld s2, sp, 4
+    ld s3, sp, 8
+    ld s4, sp, 12
     add sp, sp, 16
     jx zero, zero, ra
 

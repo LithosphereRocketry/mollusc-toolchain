@@ -3,10 +3,10 @@
 #include "iotools.h"
 
 size_t fsize(FILE* stream) {
-    size_t oldpos = ftell(stream);
+    size_t oldos = ftell(stream);
     fseek(stream, 0, SEEK_END);
     size_t sz = ftell(stream);
-    fseek(stream, oldpos, SEEK_SET);
+    fseek(stream, oldos, SEEK_SET);
     return sz;
 }
 
