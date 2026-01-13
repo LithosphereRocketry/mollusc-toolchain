@@ -163,6 +163,6 @@ const assemble_arg_t* arch_arguments[] = {
     [I_EQ] =    argmap_type_c,
     [I_BIT] =   argmap_type_c,
     [I_LD] =   argmap_type_r,
-    [I_STP] =   argmap_type_m,
+    [I_ST] =   argmap_type_m,
     [I_JX] =    argmap_type_r
 };

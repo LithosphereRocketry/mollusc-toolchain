@@ -11,9 +11,9 @@
 
 relprime: ; int relprime(int n) {
     sub sp, sp, 12
-    stp ra, sp, 0
-    stp s2, sp, 4
-    stp s3, sp, 8
+    st ra, sp, 0
+    st s2, sp, 4
+    st s3, sp, 8
     add s2, zero, a0
     add s3, zero, 2 ;   int m = 2;
 

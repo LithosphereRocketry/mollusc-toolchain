@@ -8,10 +8,10 @@
 
 puts:
     sub sp, sp, 16
-    stp ra, sp, 0
-    stp s2, sp, 4
-    stp s3, sp, 8
-    stp s4, sp, 12
+    st ra, sp, 0
+    st s2, sp, 4
+    st s3, sp, 8
+    st s4, sp, 12
 
     add s2, zero, a0
 

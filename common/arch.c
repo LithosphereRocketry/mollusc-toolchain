@@ -18,7 +18,7 @@ const char* arch_mnemonics[] = {
     [I_EQ] =    "eq",
     [I_BIT] =   "bit",
     [I_LD] =   "ld",
-    [I_STP] =   "stp",
+    [I_ST] =   "st",
     [I_JX] =    "jx",
 };
 
@@ -39,7 +39,7 @@ const arch_word_t arch_basebits[] = {
     [I_EQ] =    0x00220000,
     [I_BIT] =   0x00230000,
     [I_LD] =   0x00300000,
-    [I_STP] =   0x00300800,
+    [I_ST] =   0x00300800,
     [I_JX] =    0x00200800,
 };
 

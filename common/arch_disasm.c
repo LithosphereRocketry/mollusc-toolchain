@@ -19,7 +19,7 @@ enum arch_instr arch_identify(const arch_word_t* location) {
         if((instr & 0x00300800) == 0x00300800) { // store
             int fcode = (instr >> 24) & 0xF;
             switch (fcode) {
-                case 0x0: return I_STP;
+                case 0x0: return I_ST;
                 default: return I_INVALID;
             }
         } else if((instr & 0x00300800) == 0x00200000) { // comparison
@@ -163,7 +163,7 @@ static const disasm_t disasm_funcs[N_INSTRS] = {
     [I_EQ] =    disasm_type_c,
     [I_BIT] =   disasm_type_c,
     [I_LD] =   disasm_type_r,
-    [I_STP] =   disasm_type_m,
+    [I_ST] =   disasm_type_m,
     [I_JX] =    disasm_type_r
 };
 
