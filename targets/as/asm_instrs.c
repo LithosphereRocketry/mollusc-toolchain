@@ -34,8 +34,16 @@ const char* asm_parse_instr(const char* file, size_t line,
     }
     
     const char* mnem_end = eow(text);
+
     // this can definitely be done without malloc but I'm lazy
     char* mnem_in = strncpy_dup(text, mnem_end - text);
+    char* mode_in;
+    // split string into mnemonic and mode
+    if((mode_in = strchr(mnem_in+1, '.'))) {
+        *mode_in = '\0';
+        mode_in++;
+    }
+    const char* mode_str = mode_in ? strcpy_dup(mode_in) : NULL;
     // clang likes to complain that this is an UB cast, but it should be fine(tm)
     // as long as enum roundtrips with void*
     enum arch_pseudoinstr type = (enum arch_pseudoinstr) sm_get(&instr_map, mnem_in);
@@ -51,6 +59,7 @@ const char* asm_parse_instr(const char* file, size_t line,
     ins->pred_inv = pred_inv;
     ins->pred = pred;
     ins->type = type;
+    ins->mode = mode_str;
     ins->args = hl_make();
 
     text = mnem_end;

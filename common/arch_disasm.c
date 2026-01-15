@@ -38,11 +38,7 @@ enum arch_instr arch_identify(const arch_word_t* location) {
                     default: return I_INVALID;
                 }
             } else if((instr & 0x00300800) == 0x00300000) { // loads
-                int fcode = (instr >> 16) & 0xF;
-                switch (fcode) {
-                    case 0x0: return I_LD;
-                    default: return I_INVALID;
-                }
+                return I_LD;
             } else { // normal arithmetic
                 switch(instr & 0x001F0800) {
                     case 0x00000000: return I_ADD;
@@ -73,7 +69,27 @@ static char* disasm_type_r(char* buf, size_t len, const arch_word_t* instr) {
                 arch_regnames[*instr & 0xF],
                 &chars);
     }
-    return buf+len;
+    return buf+chars;
+}
+
+static char* disasm_ld(char* buf, size_t len, const arch_word_t* instr) {
+    int chars;
+    if(*instr & 0x400) {
+        snprintf(buf, len, "%s.%s %s, %s, %i%n", arch_mnemonics[arch_identify(instr)],
+                arch_mmnames[(*instr >> 16) & 0x7],
+                arch_regnames[(*instr >> 24) & 0xF],
+                arch_regnames[(*instr >> 12) & 0xF],
+                (int) signExtend(*instr, 10),
+                &chars);
+    } else {
+        snprintf(buf, len, "%s.%s %s, %s, %s%n", arch_mnemonics[arch_identify(instr)],
+                arch_mmnames[(*instr >> 16) & 0x7],
+                arch_regnames[(*instr >> 24) & 0xF],
+                arch_regnames[(*instr >> 12) & 0xF],
+                arch_regnames[*instr & 0xF],
+                &chars);
+    }
+    return buf+chars;
 }
 
 static char* disasm_type_c(char* buf, size_t len, const arch_word_t* instr) {
@@ -96,7 +112,7 @@ static char* disasm_type_c(char* buf, size_t len, const arch_word_t* instr) {
     return buf+len;
 }
 
-static char* disasm_type_m(char* buf, size_t len, const arch_word_t* instr) {
+static char* disasm_st(char* buf, size_t len, const arch_word_t* instr) {
     int chars;
     if(*instr & 0x400) {
         snprintf(buf, len, "%s %s, %s, %i%n", arch_mnemonics[arch_identify(instr)],
@@ -162,8 +178,8 @@ static const disasm_t disasm_funcs[N_INSTRS] = {
     [I_LT] =    disasm_type_c,
     [I_EQ] =    disasm_type_c,
     [I_BIT] =   disasm_type_c,
-    [I_LD] =   disasm_type_r,
-    [I_ST] =   disasm_type_m,
+    [I_LD] =   disasm_ld,
+    [I_ST] =   disasm_st,
     [I_JX] =    disasm_type_r
 };
 

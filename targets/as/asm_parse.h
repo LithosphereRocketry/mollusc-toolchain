@@ -11,6 +11,7 @@ struct parse_instr {
     bool pred_inv;
     const char* pred;
     enum arch_pseudoinstr type;
+    const char* mode;
     struct heap_list args;
 };
 

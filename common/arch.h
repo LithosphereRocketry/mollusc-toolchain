@@ -73,6 +73,20 @@ struct relocation {
     size_t offset; // words
 };
 
+enum arch_memmodes {
+    MM_WORD = 0,
+    MM_HALF = 1,
+    MM_BYTE = 2,
+    
+    MM_PWORD = 4,
+    MM_PHALF = 5,
+    MM_PBYTE = 6,
+
+    MM_TLB = 3,
+    MM_CR = 7,
+    N_MEMMODES = 16
+};
+
 struct bin_section {
     struct heap_list relocations; // struct relocation*
     struct string_map relative_syms; // size_t, bytes
@@ -88,5 +102,7 @@ extern const arch_word_t arch_basebits[N_INSTRS];
 extern const char* arch_regnames[];
 extern const char* arch_prednames[];
 extern const char* arch_relocnames[];
+
+extern const char* arch_mmnames[N_MEMMODES];
 
 #endif

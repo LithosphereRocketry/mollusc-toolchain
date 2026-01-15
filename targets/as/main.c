@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
         exit(-1);
     }
     if(textbin->relocations.len > 0) {
-        fprintf(stderr, "Text section has unresovled labels\n");
+        fprintf(stderr, "Text section has unresolved labels\n");
         print_assembly(textbin);
         exit(-1);
     }

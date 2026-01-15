@@ -171,6 +171,7 @@ static void destroy_parse_section(void* global, const char* key, void* value) {
     for(size_t i = 0; i < s->instrs.len; i++) {
         struct parse_instr* instr = s->instrs.buf[i];
         if(instr->pred) free((char*) instr->pred);
+        if(instr->mode) free((char*) instr->mode);
         hl_destroy(&instr->args, true);
     }
     hl_destroy(&s->instrs, true);

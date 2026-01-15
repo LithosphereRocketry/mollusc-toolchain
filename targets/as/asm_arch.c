@@ -166,3 +166,40 @@ const assemble_arg_t* arch_arguments[] = {
     [I_ST] =   argmap_type_m,
     [I_JX] =    argmap_type_r
 };
+
+static struct string_map mmode_lookup;
+static bool mmode_lookup_init = false;
+
+static bool assemble_ldmode(struct bin_section* res, size_t offs, const char* arg) {
+    if(!arg) return true;
+    if(!mmode_lookup_init) {
+        mmode_lookup = arr_inv_to_sm(arch_mmnames, 8);
+    }
+    if(sm_haskey(&mmode_lookup, arg)) {
+        res->data[offs] |= (arch_word_t) sm_get(&mmode_lookup, arg) << 16;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+const assemble_mode_t arch_assemble_modes[] = {
+    [I_J] =     NULL,
+    [I_LUI] =   NULL,
+    [I_LUR] =   NULL,
+    [I_ADD] =   NULL,
+    [I_SUB] =   NULL,
+    [I_AND] =   NULL,
+    [I_OR] =    NULL,
+    [I_XOR] =   NULL,
+    [I_SL] =    NULL,
+    [I_SR] =    NULL,
+    [I_SRA] =   NULL,
+    [I_LTU] =   NULL,
+    [I_LT] =    NULL,
+    [I_EQ] =    NULL,
+    [I_BIT] =   NULL,
+    [I_LD] =    assemble_ldmode,
+    [I_ST] =    NULL,
+    [I_JX] =    NULL
+};

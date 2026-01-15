@@ -17,8 +17,8 @@ const char* arch_mnemonics[] = {
     [I_LT] =    "lt",
     [I_EQ] =    "eq",
     [I_BIT] =   "bit",
-    [I_LD] =   "ld",
-    [I_ST] =   "st",
+    [I_LD] =    "ld",
+    [I_ST] =    "st",
     [I_JX] =    "jx",
 };
 
@@ -71,6 +71,10 @@ const char* arch_regnames[] = {
     [R_A6] = "a6",
     [R_T0] = "t0",
     [R_T1] = "t1"
+};
+
+const char* arch_mmnames[] = {
+    [MM_CR] = "cr"
 };
 
 const char* arch_relocnames[] = {

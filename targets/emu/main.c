@@ -185,7 +185,8 @@ void step(struct cpu_state* state) {
                 uint32_t res;
                 if((instr & 0x00300800) == 0x00300000) { // load
                     switch((instr >> 16) & 0xF) {
-                        case 0x0: res = load(state, a + b); break;
+                        case MM_WORD: res = load(state, a + b); break;
+                        case MM_CR: res = 0; break; // ld.cr always returning 0 is valid for a processor with no features
                         default:
                             fprintf(stderr, "Unsupported instruction %08x\n", instr);
                             exit(-1);

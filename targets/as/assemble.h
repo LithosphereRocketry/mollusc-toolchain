@@ -5,6 +5,8 @@
 #include "arch.h"
 
 typedef bool (*assemble_arg_t)(struct bin_section* res, size_t offs, const char* arg);
+typedef bool (*assemble_mode_t)(struct bin_section* res, size_t offs, const char* arg);
+
 
 struct bin_section assemble(const struct parse_section* parse);
 

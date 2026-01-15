@@ -146,6 +146,10 @@ static size_t assemble_instr(struct bin_section* dest, size_t offs, struct parse
         asm_err("Tried to assemble invalid predicate", instr->pred, instr->file, instr->line);
         exit(-1);
     }
+    if(arch_assemble_modes[instr->type] && !arch_assemble_modes[instr->type](dest, offs, instr->mode)) {
+        asm_err("Tried to assemble invalid instruction mode", instr->mode, instr->file, instr->line);
+        exit(-1);
+    }
     
     const assemble_arg_t* argtype = arch_arguments[instr->type];
     if(!argtype) {
