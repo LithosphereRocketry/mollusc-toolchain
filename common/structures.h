@@ -22,7 +22,7 @@ void hl_append(struct heap_list* hl, void* x);
 void hl_destroy(struct heap_list* hl, bool free_values);
 
 struct string_map_entry {
-    char* key;
+    size_t key_offs;
     void* value;
     uint32_t _hash; // cache so we don't have to recompute when resizing
     struct string_map_entry* next;
@@ -31,6 +31,11 @@ struct string_map_entry {
 struct string_map {
     size_t _count;
     size_t _entries;
+
+    char* _key_buffer;
+    size_t _key_buffer_len;
+    size_t _key_buffer_cap;
+
     struct string_map_entry** table;
 };
 

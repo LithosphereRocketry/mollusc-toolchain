@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define KEY_BUFFER_PREALLOC 16
+
 struct heap_list hl_make() {
     struct heap_list hl = {
         .buf = NULL,
@@ -47,6 +49,9 @@ struct string_map sm_make() {
     struct string_map sm = {
         ._count = 0,
         ._entries = 0,
+        ._key_buffer = NULL,
+        ._key_buffer_len = 0,
+        ._key_buffer_cap = 0,
         .table = NULL
     };
     return sm;
@@ -75,7 +80,7 @@ bool sm_haskey(const struct string_map* sm, const char* key) {
             return false;
         }
         // check the hash first to avoid strcmp when we know it'll fail
-        if(e->_hash == hash && !strcmp(key, e->key)) {
+        if(e->_hash == hash && !strcmp(key, sm->_key_buffer + e->key_offs)) {
             return true;
         }
         e = e->next;
@@ -92,7 +97,7 @@ void* sm_get(const struct string_map* sm, const char* key) {
             return NULL;
         }
         // check the hash first to avoid strcmp when we know it'll fail
-        if(e->_hash == hash && !strcmp(key, e->key)) {
+        if(e->_hash == hash && !strcmp(key, sm->_key_buffer + e->key_offs)) {
             return e->value;
         }
         e = e->next;
@@ -143,9 +148,20 @@ void sm_put(struct string_map* sm, const char* key, void* value) {
 
     struct string_map_entry* newent = malloc(sizeof(struct string_map_entry));
     // make sure our key can outlive the key we get passed
-    newent->key = malloc(strlen(key) + 1);
+    if(!sm->_key_buffer) {
+        sm->_key_buffer = malloc(sizeof(char)*KEY_BUFFER_PREALLOC);
+        sm->_key_buffer_cap = KEY_BUFFER_PREALLOC;
+    }
+    size_t key_len = strlen(key) + 1;
+    // in case we allocate a really big key that requires multiple resizes
+    while(sm->_key_buffer_len + key_len > sm->_key_buffer_cap) {
+        sm->_key_buffer_cap *= 2;
+        sm->_key_buffer = realloc(sm->_key_buffer, sm->_key_buffer_cap);
+    }
     // assuming malloc doesn't fail, this should be a guaranteed safe strcpy
-    strcpy(newent->key, key);
+    newent->key_offs = sm->_key_buffer_len;
+    strcpy(sm->_key_buffer + sm->_key_buffer_len, key);
+    sm->_key_buffer_len += key_len;
     newent->value = value;
     newent->_hash = hash;
     newent->next = NULL;
@@ -157,7 +173,6 @@ void sm_put(struct string_map* sm, const char* key, void* value) {
 
 static void sm_destroy_ent(struct string_map_entry* e, bool free_values) {
     if(e) {
-        free(e->key);
         if(free_values) free(e->value);
         struct string_map_entry* next = e->next;
         free(e);
@@ -170,14 +185,23 @@ void sm_destroy(struct string_map* sm, bool free_values) {
     for(size_t i = 0; i < sm->_entries; i++) {
         sm_destroy_ent(sm->table[i], free_values);
     }
-    if(sm->table) free(sm->table);
+    if(sm->table) {
+        free(sm->table);
+        sm->table = NULL;
+    }
+    if(sm->_key_buffer) {
+        free(sm->_key_buffer);
+        sm->_key_buffer = NULL;
+        sm->_key_buffer_len = 0;
+        sm->_key_buffer_cap = 0;
+    }
 }
 
 
-static void sm_printent(const struct string_map_entry* e) {
+static void sm_printent(const struct string_map_entry* e, const char* key_buf) {
     if(e) {
-        printf("%s:%p -> ", e->key, e->value);
-        sm_printent(e->next);
+        printf("%s:%p -> ", key_buf + e->key_offs, e->value);
+        sm_printent(e->next, key_buf);
     } else {
         printf("NULL");
     }
@@ -185,7 +209,7 @@ static void sm_printent(const struct string_map_entry* e) {
 
 void sm_print(const struct string_map* sm) {
     for(size_t i = 0; i < sm->_entries; i++) {
-        sm_printent(sm->table[i]);
+        sm_printent(sm->table[i], sm->_key_buffer);
         printf("\n");
     }
 }
@@ -195,7 +219,7 @@ void sm_foreach(const struct string_map* sm,
     for(size_t i = 0; i < sm->_entries; i++) {
         struct string_map_entry* e = sm->table[i];
         while(e) {
-            func(global, e->key, e->value);
+            func(global, sm->_key_buffer + e->key_offs, e->value);
             e = e->next;
         }
     }
