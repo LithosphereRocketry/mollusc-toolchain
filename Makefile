@@ -83,7 +83,7 @@ $(EMU_TESTS): test_emu_%: $(TEST_EMU_OUT_DIR)/%_out.bin $(TEST_EMU_OUT_DIR)/%_ve
 # Temporary until linker works
 .PRECIOUS: $(TEST_EMU_OUT_DIR)/%_rom.bin
 $(TEST_EMU_OUT_DIR)/%_rom.bin: $(TEST_EMU_DIR)/%/main.s out/as | $(TEST_EMU_OUT_DIR)
-	out/as $< -o $@
+	out/as $< -B -o $@
 
 $(TEST_EMU_OUT_DIR)/%_verify.bin: $(TEST_EMU_DIR)/%/reference.py | $(TEST_EMU_OUT_DIR)
 	python3 $< > $@

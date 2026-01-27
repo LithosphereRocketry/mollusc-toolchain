@@ -19,7 +19,7 @@ static int doarg(argument_t* arg, int i, int argc, char** argv) {
 }
 
 static void dohelp(argument_t** args, size_t nargs) {
-    size_t max_width = 0;
+    size_t max_width = 8;
     size_t* widths = malloc(nargs * sizeof(size_t));
     for(size_t i = 0; i < nargs; i++) {
         argument_t* arg = args[i];

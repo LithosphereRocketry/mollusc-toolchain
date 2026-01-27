@@ -4,12 +4,17 @@
 #include "argparse.h"
 #include "iotools.h"
 #include "asm_parse.h"
+#include "arch_elf.h"
 #include "assemble.h"
 
-argument_t arg_out = {'o', NULL, "Filename for output", true, {NULL}};
+argument_t arg_out = {.abbr='o', .name=NULL, .hasval=true, .result={.value = NULL},
+    .help = "Filename for output"};
+argument_t arg_bin = {.abbr='B', .name=NULL, .hasval=false, .result={.present = false},
+    .help = "Force plain binary output (instead of ELF)"};
 
 argument_t* args[] = {
-    &arg_out
+    &arg_out,
+    &arg_bin
 };
 
 void assemble_section(void* global, const char* name, void* value) {
@@ -20,10 +25,8 @@ void assemble_section(void* global, const char* name, void* value) {
     sm_put(bin_sections, name, res);
 }
 
-void print_destroy_asm_section(void* global, const char* name, void* res) {
+void destroy_asm_section(void* global, const char* name, void* res) {
     (void) global, (void) name;
-    printf("Assembly for section \"%s\":\n", name);
-    // print_assembly(res);
     destroy_assembly(res);
 }
 
@@ -59,23 +62,33 @@ int main(int argc, char** argv) {
     struct string_map bin_sections = sm_make();
     sm_foreach(&parsed.sections, assemble_section, &bin_sections);
 
-    struct bin_section* textbin = sm_get(&bin_sections, "text");
-    if(!textbin) {
-        fprintf(stderr, "No text section in assembly!\n");
-        exit(-1);
-    }
-    if(textbin->relocations.len > 0) {
-        fprintf(stderr, "Text section has unresolved labels\n");
-        print_assembly(textbin);
-        exit(-1);
-    }
     const char* outname = "a.out";
     if(arg_out.result.value) outname = arg_out.result.value;
     FILE* outfile = fopen(outname, "w");
-    fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
+    if(!outfile) {
+        fprintf(stderr, "Failed to open file %s for writing\n", outname);
+        exit(1);
+    }
+
+    if(arg_bin.result.present) {
+        struct bin_section* textbin = sm_get(&bin_sections, "text");
+        if(!textbin) {
+            fprintf(stderr, "No text section in assembly!\n");
+            exit(-1);
+        }
+        if(textbin->relocations.len > 0) {
+            fprintf(stderr, "Text section has unresolved labels\n");
+            print_assembly(textbin);
+            exit(-1);
+        }
+        fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
+    } else {
+        elf_write(outfile, &bin_sections);
+    }
     fclose(outfile);
 
-    sm_foreach(&bin_sections, print_destroy_asm_section, NULL);
+    
+    sm_foreach(&bin_sections, destroy_asm_section, NULL);
     sm_destroy(&bin_sections, true);
     
     destroy_parse(&parsed);
