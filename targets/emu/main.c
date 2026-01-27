@@ -7,8 +7,8 @@
 #include "iotools.h"
 #include "arch_disasm.h"
 
-argument_t arg_cycles = {'c', "max-cycles", true, {NULL}};
-argument_t arg_trace = {'t', "trace", true, {NULL}};
+argument_t arg_cycles = {'c', "max-cycles", "Maximum number of cycles to simulate", true, {NULL}};
+argument_t arg_trace = {'t', "trace", "Output instruction trace to file", true, {NULL}};
 
 argument_t* args[] = {
     &arg_cycles,

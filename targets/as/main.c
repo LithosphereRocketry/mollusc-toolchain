@@ -6,7 +6,7 @@
 #include "asm_parse.h"
 #include "assemble.h"
 
-argument_t arg_out = {'o', NULL, true, {NULL}};
+argument_t arg_out = {'o', NULL, "Filename for output", true, {NULL}};
 
 argument_t* args[] = {
     &arg_out
