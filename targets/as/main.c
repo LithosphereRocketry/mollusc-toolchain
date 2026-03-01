@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "argparse.h"
 #include "iotools.h"
@@ -81,9 +82,13 @@ int main(int argc, char** argv) {
             print_assembly(textbin);
             exit(-1);
         }
+        arch_word_t vector_table[32];
+        memset(vector_table, 0, sizeof(vector_table));
+        vector_table[0] = 32*sizeof(arch_word_t);
+        fwrite(vector_table, sizeof(arch_word_t), 32, outfile);
         fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
     } else {
-        elf_write(outfile, &bin_sections);
+        // elf_write(outfile, &bin_sections);
     }
     fclose(outfile);
 

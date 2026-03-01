@@ -1,7 +1,7 @@
 ; todo: this should really be done by the linker (if I had one :/)
 
 init:
-    lui sp , 0x8000
+    lui sp , 0x10000
     jx zero, zero, ra
 
 putc:

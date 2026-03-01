@@ -34,8 +34,8 @@ struct cpu_state {
     uint8_t pred;
     union {
         struct {
-            uint32_t ram[8192];
             uint32_t rom[8192];
+            uint32_t ram[8192];
         } mem_lowonly;
     } mem;
 } state;
@@ -61,9 +61,9 @@ uint32_t load(struct cpu_state* state, uint32_t addr) {
     switch(state->mtype) {
         case MEM_LOWONLY:
             if(addr < 0x8000) {
-                return state->mem.mem_lowonly.ram[addr >> 2];
+                return state->mem.mem_lowonly.rom[addr >> 2];
             } else if(addr < 0x10000) {
-                return state->mem.mem_lowonly.rom[(addr - 0x8000) >> 2];
+                return state->mem.mem_lowonly.ram[(addr - 0x8000) >> 2];
             } else {
                 fprintf(stderr, "Attempted load out of bounds (%08x)\n", addr);
                 exit(-1);
@@ -100,6 +100,10 @@ void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
             }
             break;
     };
+}
+
+void vector(struct cpu_state* state, uint32_t vector_num) {
+    state->pc = load(state, 0 + vector_num*4);
 }
 
 #define DIS_BUF_SZ 64
@@ -269,6 +273,7 @@ int main(int argc, char** argv) {
     free(filebin);
     fclose(file);
 
+    vector(&state, 0);
     for(size_t i = 0; i < max_cycles || max_cycles == 0; i++) {
         if(tracefile) print_state(tracefile, &state);
         step(&state);

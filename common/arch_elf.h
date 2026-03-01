@@ -2,11 +2,16 @@
 #define ARCH_ELF_H
 
 #include <stdio.h>
+#include <elf.h>
+
+// big arbitrary number for architecture ID to hopefully not collide with any 
+// existing CPUs
+#define EM_MOLLUSC (0x739F)
 
 #include "structures.h"
 
 // String map of struct bin_section
 // Retuns 0 on success, error code on failure
-int elf_write(FILE* f, const struct string_map* sections);
+int elf_write(FILE* f, const struct string_map* sections, Elf32_Half type);
 
 #endif
