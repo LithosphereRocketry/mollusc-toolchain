@@ -45,6 +45,14 @@ void hl_destroy(struct heap_list* hl, bool free_values) {
     hl->_cap = 0;
 }
 
+struct string_map_entry {
+    size_t key_offs;
+    void* value;
+    uint32_t _hash; // cache so we don't have to recompute when resizing
+    struct string_map_entry* next;
+    bool value_heap;
+};
+
 struct string_map sm_make() {
     struct string_map sm = {
         ._count = 0,
@@ -70,37 +78,30 @@ static uint32_t sm_hash(const char* str) {
     return h;
 }
 
-bool sm_haskey(const struct string_map* sm, const char* key) {
-    if(sm->_entries == 0) return false;
-
+static struct string_map_entry* sm_getent(const struct string_map* sm, const char* key) {
+    if(sm->_entries == 0) return NULL;
     uint32_t hash = sm_hash(key);
     struct string_map_entry* e = sm->table[hash % sm->_entries];
     while(1) {
-        if(e == NULL) {
-            return false;
-        }
+        if(e == NULL) return NULL;
         // check the hash first to avoid strcmp when we know it'll fail
         if(e->_hash == hash && !strcmp(key, sm->_key_buffer + e->key_offs)) {
-            return true;
+            return e;
         }
         e = e->next;
     }
 }
 
-void* sm_get(const struct string_map* sm, const char* key) {
-    if(sm->_entries == 0) return NULL;
+bool sm_haskey(const struct string_map* sm, const char* key) {
+    return !!sm_getent(sm, key);
+}
 
-    uint32_t hash = sm_hash(key);
-    struct string_map_entry* e = sm->table[hash % sm->_entries];
-    while(1) {
-        if(e == NULL) {
-            return NULL;
-        }
-        // check the hash first to avoid strcmp when we know it'll fail
-        if(e->_hash == hash && !strcmp(key, sm->_key_buffer + e->key_offs)) {
-            return e->value;
-        }
-        e = e->next;
+void* sm_get(const struct string_map* sm, const char* key) {
+    struct string_map_entry* e = sm_getent(sm, key);
+    if(e) {
+        return e->value;
+    } else {
+        return NULL;
     }
 }
 
@@ -138,7 +139,7 @@ static void sm_expand(struct string_map* sm) {
     }
 }
 
-void sm_put(struct string_map* sm, const char* key, void* value) {
+void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap) {
     // very crude load factor of 1 saves us from doing floating point
     if(sm->_count >= sm->_entries) {
         sm_expand(sm);
@@ -163,6 +164,7 @@ void sm_put(struct string_map* sm, const char* key, void* value) {
     strcpy(sm->_key_buffer + sm->_key_buffer_len, key);
     sm->_key_buffer_len += key_len;
     newent->value = value;
+    newent->value_heap = value_heap;
     newent->_hash = hash;
     newent->next = NULL;
 
@@ -171,19 +173,19 @@ void sm_put(struct string_map* sm, const char* key, void* value) {
     sm->_count ++;
 }
 
-static void sm_destroy_ent(struct string_map_entry* e, bool free_values) {
+static void sm_destroy_ent(struct string_map_entry* e) {
     if(e) {
-        if(free_values) free(e->value);
+        if(e->value_heap) free(e->value);
         struct string_map_entry* next = e->next;
         free(e);
         // make it tail recursive for good vibes
-        sm_destroy_ent(next, free_values);
+        sm_destroy_ent(next);
     }
 }
 
-void sm_destroy(struct string_map* sm, bool free_values) {
+void sm_destroy(struct string_map* sm) {
     for(size_t i = 0; i < sm->_entries; i++) {
-        sm_destroy_ent(sm->table[i], free_values);
+        sm_destroy_ent(sm->table[i]);
     }
     if(sm->table) {
         free(sm->table);
@@ -225,10 +227,26 @@ void sm_foreach(const struct string_map* sm,
     }
 }
 
+void sm_filter(struct string_map* sm, bool (*func)(const char*, const void*)) {
+    for(size_t i = 0; i < sm->_entries; i++) {
+        struct string_map_entry** eptr = sm->table + i;
+        while(*eptr) {
+            if(!func(sm->_key_buffer + (*eptr)->key_offs, (*eptr)->value)) {
+                struct string_map_entry* e = *eptr;
+                *eptr = e->next;
+                e->next = NULL;
+                sm_destroy_ent(e);
+            } else {
+                eptr = &((*eptr)->next);
+            }
+        }
+    }
+}
+
 struct string_map arr_inv_to_sm(const char **arr, size_t len) {
     struct string_map sm = sm_make();
     for(size_t i = 0; i < len; i++) {
-        if(arr[i]) sm_put(&sm, arr[i], (void*) i);
+        if(arr[i]) sm_put(&sm, arr[i], (void*) i, false);
     }
     return sm;
 }

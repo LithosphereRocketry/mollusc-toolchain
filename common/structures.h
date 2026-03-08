@@ -21,12 +21,7 @@ void hl_append(struct heap_list* hl, void* x);
 
 void hl_destroy(struct heap_list* hl, bool free_values);
 
-struct string_map_entry {
-    size_t key_offs;
-    void* value;
-    uint32_t _hash; // cache so we don't have to recompute when resizing
-    struct string_map_entry* next;
-};
+struct string_map_entry;
 
 struct string_map {
     size_t _count;
@@ -61,15 +56,15 @@ void* sm_get(const struct string_map* sm, const char* key);
  * NOTE: overwriting a heap-allocated value causes it to be leaked; to be fixed
  * in future revisions.
  */
-void sm_put(struct string_map* sm, const char* key, void* value);
+void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap);
+
+void sm_remove(struct string_map* sm, const char* key);
 
 /**
- * Free the memory allocated by the stringmap. Frees value pointers if
- * free_values is set; otherwise assumes them to be managed elsewhere or type-
- * punned (e.g. (void*) some_sizet). Does not free sm itself if it is heap-
- * allocated; do that manually with free().
+ * Free the memory allocated by the stringmap. Does not free sm itself if it is
+ * heap-allocated; do that manually with free().
  */
-void sm_destroy(struct string_map* sm, bool free_values);
+void sm_destroy(struct string_map* sm);
 
 // Print the internal representation of the stringmap. For debugging.
 void sm_print(const struct string_map* sm);
@@ -82,6 +77,12 @@ void sm_print(const struct string_map* sm);
  */
 void sm_foreach(const struct string_map* sm,
         void (*func)(void*, const char*, void*), void* global);
+
+/**
+ * In-place, remove each element of the map for which func(key, value) returns
+ * false.
+ */
+void sm_filter(struct string_map* sm, bool (*func)(const char*, const void*));
 
 /**
  * Produces a punned size_t map from elements to indices of the given array.

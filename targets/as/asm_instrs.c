@@ -17,7 +17,7 @@ const char* asm_parse_instr(const char* file, size_t line,
         instr_map = arr_inv_to_sm(arch_mnemonics, N_INSTRS);
         for(size_t i = N_INSTRS; i < N_PSEUDOINSTRS; i++) {
             if(arch_pseudo_mnemonics[i]) {
-                sm_put(&instr_map, arch_pseudo_mnemonics[i], (void*) i);
+                sm_put(&instr_map, arch_pseudo_mnemonics[i], (void*) i, false);
             }
         }
         firstrun = false;

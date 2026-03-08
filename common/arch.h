@@ -87,10 +87,19 @@ enum arch_memmodes {
     N_MEMMODES = 16
 };
 
+enum bin_label_flags {
+    BL_RELATIVE = (1 << 0),
+    BL_EXPORTED = (1 << 1)
+};
+
+struct bin_label {
+    size_t offset; // bytes
+    enum bin_label_flags flags;
+};
+
 struct bin_section {
     struct heap_list relocations; // struct relocation*
-    struct string_map relative_syms; // size_t, bytes
-    struct string_map absolute_syms; // size_t, bytes
+    struct string_map labels; // struct bin_label*
     size_t data_sz;
     arch_word_t* data;
 };

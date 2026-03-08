@@ -23,7 +23,7 @@ void assemble_section(void* global, const char* name, void* value) {
     struct parse_section* section = value;
     struct bin_section* res = malloc(sizeof(struct bin_section));
     *res = assemble(section);
-    sm_put(bin_sections, name, res);
+    sm_put(bin_sections, name, res, true);
 }
 
 void destroy_asm_section(void* global, const char* name, void* res) {
@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
             print_assembly(textbin);
             exit(-1);
         }
+
         arch_word_t vector_table[32];
         memset(vector_table, 0, sizeof(vector_table));
         vector_table[0] = 32*sizeof(arch_word_t);
@@ -94,7 +95,7 @@ int main(int argc, char** argv) {
 
     
     sm_foreach(&bin_sections, destroy_asm_section, NULL);
-    sm_destroy(&bin_sections, true);
+    sm_destroy(&bin_sections);
     
     destroy_parse(&parsed);
 }

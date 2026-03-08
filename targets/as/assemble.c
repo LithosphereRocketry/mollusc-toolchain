@@ -187,14 +187,22 @@ struct transfer_asm_label_global {
 static void transfer_asm_label(void* global, const char* key, void* value) {
     struct transfer_asm_label_global* info = global;
     size_t offset = info->offset_map[((size_t) value)] * sizeof(arch_word_t);
-    sm_put(info->relative_syms, key, (void*) offset);
+    struct bin_label* label = malloc(sizeof(struct bin_label));
+    label->offset = offset;
+    label->flags = BL_RELATIVE;
+    sm_put(info->relative_syms, key, label, true);
+}
+
+static bool bl_is_exported(const char* key, const void* value) {
+    (void) key;
+    const struct bin_label* lbl = value;
+    return lbl->flags & BL_EXPORTED;
 }
 
 struct bin_section assemble(const struct parse_section* parse) {
     struct bin_section res = {
         .relocations = hl_make(),
-        .absolute_syms = sm_make(),
-        .relative_syms = sm_make(),
+        .labels = sm_make(),
         .data_sz = 0,
         .data = NULL
     };
@@ -213,12 +221,18 @@ struct bin_section assemble(const struct parse_section* parse) {
     }
 
     struct transfer_asm_label_global transfer_info = {
-        .relative_syms = &res.relative_syms,
+        .relative_syms = &res.labels,
         .offset_map = instr_offsets
     };
 
     sm_foreach(&parse->instr_labels, transfer_asm_label, &transfer_info);
     free(instr_offsets);
+
+    for(size_t i = 0; i < parse->globals.len; i++) {
+        const char* glb = parse->globals.buf[i];
+        struct bin_label* lbl = sm_get(&res.labels, glb);
+        if(lbl) lbl->flags |= BL_EXPORTED;
+    }
 
     res.data_sz = offset_word;
     if(res.data) res.data = realloc(res.data, res.data_sz * sizeof(arch_word_t));
@@ -248,8 +262,7 @@ void destroy_assembly(struct bin_section* res) {
         free((char*) reloc->symbol);
     }
     hl_destroy(&res->relocations, true);
-    sm_destroy(&res->absolute_syms, false);
-    sm_destroy(&res->relative_syms, false);
+    sm_destroy(&res->labels);
     free(res->data);
     res->data = NULL;
     res->data_sz = 0;

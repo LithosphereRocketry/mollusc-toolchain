@@ -29,7 +29,7 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
     new_section->instrs = hl_make();
     new_section->instr_labels = sm_make();
 
-    sm_put(&res->sections, name, new_section);
+    sm_put(&res->sections, name, new_section, true);
     return new_section;
 }
 
@@ -111,7 +111,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
                 parse_err("Invalid format for label", fn, text, lineno);
                 exit(-1);
             }
-            sm_put(&current_section->instr_labels, name, (void*) current_section->instrs.len);
+            sm_put(&current_section->instr_labels, name, (void*) current_section->instrs.len, false);
             free(name);
             text = nextpos+1;
         } else if(current_section && (nextpos = asm_parse_instr(fn, lineno, text, current_section))) {
@@ -175,12 +175,12 @@ static void destroy_parse_section(void* global, const char* key, void* value) {
         hl_destroy(&instr->args, true);
     }
     hl_destroy(&s->instrs, true);
-    sm_destroy(&s->instr_labels, false);
+    sm_destroy(&s->instr_labels);
     
 }
 
 void destroy_parse(struct parse_result* res) {
     sm_foreach(&res->sections, destroy_parse_section, NULL);
-    sm_destroy(&res->sections, true);
+    sm_destroy(&res->sections);
     hl_destroy(&res->filenames, true);
 }

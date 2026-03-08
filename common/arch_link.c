@@ -17,10 +17,11 @@ void link_section(struct bin_section* section) {
     size_t remaining = section->relocations.len;
     for(size_t i = 0; i < section->relocations.len; i++) {
         struct relocation* reloc = section->relocations.buf[i];
-        if(sm_haskey(&section->relative_syms, reloc->symbol)) {
+        if(sm_haskey(&section->labels, reloc->symbol)) {
+            struct bin_label* label = sm_get(&section->labels, reloc->symbol);
+            size_t target = label->offset;
             switch(reloc->type) {
                 case RELOC_J_REL: {
-                    size_t target = (size_t) sm_get(&section->relative_syms, reloc->symbol);
                     if((target & 0b11) != 0) {
                         reloc_err("Relocation has unaligned target", "todo", 0, reloc);
                         exit(-1);
@@ -36,7 +37,6 @@ void link_section(struct bin_section* section) {
                     section->data[reloc->offset] |= disp_trimmed;
                 } break;
                 case RELOC_LUR_REL: {
-                    size_t target = (size_t) sm_get(&section->relative_syms, reloc->symbol);
                     size_t field_offset = (section->data[reloc->offset] & LONG_MASK) << 10;
                     section->data[reloc->offset] &= ~LONG_MASK; 
                     size_t disp = (target + field_offset) - (reloc->offset << 2);
@@ -44,7 +44,6 @@ void link_section(struct bin_section* section) {
                     section->data[reloc->offset] |= disp_trimmed;
                 } break;
                 case RELOC_IMM_REL: {
-                    size_t target = (size_t) sm_get(&section->relative_syms, reloc->symbol);
                     size_t field_offset = signExtend(section->data[reloc->offset] & LONG_MASK, 10);
                     section->data[reloc->offset] &= ~IMM_MASK;
                     size_t disp = (target + field_offset) - (reloc->offset << 2);
