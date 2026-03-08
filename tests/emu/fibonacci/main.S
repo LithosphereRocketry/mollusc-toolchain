@@ -1,4 +1,7 @@
 .section text
+#include "../platform.inc"
+
+_start:
     j ra, init
 
     add a0, zero, 3
@@ -25,5 +28,3 @@ print_loop:
 
     add a0, zero, zero
     j ra, exit
-
-#include "../platform.inc"

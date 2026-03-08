@@ -83,9 +83,15 @@ int main(int argc, char** argv) {
             exit(-1);
         }
 
+        struct bin_label* start_label = sm_get(&textbin->labels, "_start");
+        if(!start_label) {
+            fprintf(stderr, "Text section has no entry point\n");
+            exit(-1);
+        }
+
         arch_word_t vector_table[32];
         memset(vector_table, 0, sizeof(vector_table));
-        vector_table[0] = 32*sizeof(arch_word_t);
+        vector_table[0] = 32*sizeof(arch_word_t) + start_label->offset;
         fwrite(vector_table, sizeof(arch_word_t), 32, outfile);
         fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
     } else {
