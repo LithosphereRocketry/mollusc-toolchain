@@ -153,9 +153,9 @@ void step(struct cpu_state* state) {
             uint32_t a = state->regs[ra];
             uint32_t b = (instr & 0x400) ? signExtend(instr, 10) : state->regs[rb];
             if((instr & 0x00300800) == 0x00300800) { // store
-                int rm = (instr >> 16) & 0xF;
+                int rm = (instr >> 24) & 0xF;
                 uint32_t m = state->regs[rm];
-                switch((instr >> 24) & 0xF) {
+                switch((instr >> 16) & 0xF) {
                     case 0x0: store(state, a + b, m); break;
                     default:
                         fprintf(stderr, "Unsupported instruction %08x\n", instr);

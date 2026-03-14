@@ -77,9 +77,6 @@ bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
 bool assemble_rd(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 24);
 }
-bool assemble_rm(struct bin_section* res, size_t offs, const char* arg) {
-    return assemble_reg(res, offs, arg, 16);
-}
 bool assemble_ra(struct bin_section* res, size_t offs, const char* arg) {
     return assemble_reg(res, offs, arg, 12);
 }
@@ -137,9 +134,7 @@ static const assemble_arg_t argmap_type_r[] =
         {assemble_rd, assemble_ra, assemble_rbi, NULL};
 static const assemble_arg_t argmap_type_c[] = 
         {assemble_pd, assemble_ra, assemble_rbi, NULL};
-static const assemble_arg_t argmap_type_m[] = 
-        {assemble_rm, assemble_ra, assemble_rbi, NULL};
-        
+
 static const assemble_arg_t argmap_j[] =
         {assemble_rd, assemble_immj, NULL};
 
@@ -163,14 +158,14 @@ const assemble_arg_t* arch_arguments[] = {
     [I_EQ] =    argmap_type_c,
     [I_BIT] =   argmap_type_c,
     [I_LD] =   argmap_type_r,
-    [I_ST] =   argmap_type_m,
+    [I_ST] =   argmap_type_r,
     [I_JX] =    argmap_type_r
 };
 
 static struct string_map mmode_lookup;
 static bool mmode_lookup_init = false;
 
-static bool assemble_ldmode(struct bin_section* res, size_t offs, const char* arg) {
+static bool assemble_mmode(struct bin_section* res, size_t offs, const char* arg) {
     if(!arg) return true;
     if(!mmode_lookup_init) {
         mmode_lookup = arr_inv_to_sm(arch_mmnames, 8);
@@ -199,7 +194,7 @@ const assemble_mode_t arch_assemble_modes[] = {
     [I_LT] =    NULL,
     [I_EQ] =    NULL,
     [I_BIT] =   NULL,
-    [I_LD] =    assemble_ldmode,
-    [I_ST] =    NULL,
+    [I_LD] =    assemble_mmode,
+    [I_ST] =    assemble_mmode,
     [I_JX] =    NULL
 };
