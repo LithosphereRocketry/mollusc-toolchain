@@ -1,5 +1,7 @@
 .section text
+#include "../platform.inc"
 
+_start:
     j ra, init
     ; return relprime(0x13b0);
     lui a0, 0x13b0
@@ -45,5 +47,3 @@ gcd_loop: ;   while(
 gcd_done:
     add a0, zero, a1    ;   return b;
     jx zero, zero, ra ; }
-
-#include "../platform.inc"

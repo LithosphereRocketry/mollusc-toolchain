@@ -1,4 +1,7 @@
 .section text
+#include "../platform.inc"
+
+_start:
 
     j ra, init
     lr a0, hellorld
@@ -41,6 +44,3 @@ puts_done:
 
 hellorld:
 .asciz "Hellorld!\n"
-
-#include "../platform.inc"
-

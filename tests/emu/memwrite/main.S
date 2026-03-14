@@ -1,5 +1,8 @@
 
 .section text
+#include "../platform.inc"
+
+_start:
         j ra, init
         lui s2, 0x8000
         add a0, zero, 65
@@ -9,5 +12,3 @@
         j ra, putc
         add a0, zero, zero
         j ra, exit
-
-#include "../platform.inc"
