@@ -76,7 +76,7 @@ uint32_t load(struct cpu_state* state, uint32_t addr) {
 }
 
 FILE* tracefile = NULL;
-void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
+void store(struct cpu_state* state, uint32_t addr, uint32_t data, uint8_t byte_mask) {
     if((addr & 0x3) != 0) {
         fprintf(stderr, "Attempted load with misaligned address (%08x)\n", addr);
         exit(-1);
@@ -84,16 +84,25 @@ void store(struct cpu_state* state, uint32_t addr, uint32_t data) {
     switch(state->mtype) {
         case MEM_LOWONLY:
             if(addr < 32768) {
-                state->mem.mem_lowonly.ram[addr >> 2] = data;
+                fprintf(stderr, "Attempted store into ROM (%08x)\n", addr);
+                // todo inelegant hack to make sure everything is closed
+                if(tracefile) fclose(tracefile);
+                exit(-1);
             } else if(addr < 65536) {
-                state->mem.mem_lowonly.rom[addr >> 2] = data;
-            } else if(addr == 0x01000000) {
+                uint32_t bitmask = 0;
+                for(int i = 0; i < 4; i++) {
+                    if(byte_mask & (1 << i)) bitmask |= 0xFF << (i*8);
+                }
+                addr -= 32768;
+                state->mem.mem_lowonly.ram[addr >> 2] &= ~bitmask;
+                state->mem.mem_lowonly.ram[addr >> 2] |= data & bitmask;
+            } else if(addr == 0x01000000 && (byte_mask & 1)) {
                 putchar(data & 0xFF);
-            } else if(addr == 0x01001000) {
+            } else if(addr == 0x01001000 && (byte_mask & 1)) {
                 fprintf(stderr, "Terminating with code %i\n", (int) data);
                 exit(data);
             } else {
-                fprintf(stderr, "Attempted load out of bounds (%08x)\n", addr);
+                fprintf(stderr, "Attempted store out of bounds (%08x)\n", addr);
                 // todo inelegant hack to make sure everything is closed
                 if(tracefile) fclose(tracefile);
                 exit(-1);
@@ -155,8 +164,11 @@ void step(struct cpu_state* state) {
             if((instr & 0x00300800) == 0x00300800) { // store
                 int rm = (instr >> 24) & 0xF;
                 uint32_t m = state->regs[rm];
+                uint32_t addr = a + b;
                 switch((instr >> 16) & 0xF) {
-                    case 0x0: store(state, a + b, m); break;
+                    case MM_WORD: store(state, addr, m, 0xF); break;
+                    case MM_HALF: store(state, addr & ~0b10, m << 8*(addr & 0b10), 0x3 << (addr & 0b10)); break;
+                    case MM_BYTE: store(state, addr & ~0b11, m << 8*(addr & 0b11), 0x1 << (addr & 0b11)); break;
                     default:
                         fprintf(stderr, "Unsupported instruction %08x\n", instr);
                         exit(-1);
@@ -188,9 +200,13 @@ void step(struct cpu_state* state) {
                 int rd = (instr >> 24) & 0xF;
                 uint32_t res;
                 if((instr & 0x00300800) == 0x00300000) { // load
+                    uint32_t addr = a + b;
                     switch((instr >> 16) & 0xF) {
-                        case MM_WORD: res = load(state, a + b); break;
-                        case MM_CR: res = 0; break; // ld.cr always returning 0 is valid for a processor with no features
+                        case MM_WORD: res = load(state, addr); break;
+                        case MM_HALF: res = load(state, addr & ~0b10) << 8*(addr & 0b10); break;
+                        case MM_BYTE: res = load(state, addr & ~0b11) << 8*(addr & 0b11); break;
+                        case MM_CR: res = 0b00000000000000000000000000010001; break;
+                        // TODO: better feature register support (including configs)
                         default:
                             fprintf(stderr, "Unsupported instruction %08x\n", instr);
                             exit(-1);

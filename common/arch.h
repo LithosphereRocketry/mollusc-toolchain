@@ -77,13 +77,12 @@ enum arch_memmodes {
     MM_WORD = 0,
     MM_HALF = 1,
     MM_BYTE = 2,
-    
-    MM_PWORD = 4,
-    MM_PHALF = 5,
-    MM_PBYTE = 6,
+    MM_CR = 3,
 
-    MM_TLB = 3,
-    MM_CR = 7,
+    MM_ITLB_ABS = 4,
+    MM_DTLB_ABS = 5,
+    MM_ITLB_TR = 6,
+    MM_DTLB_TR = 7,    
     N_MEMMODES = 16
 };
 

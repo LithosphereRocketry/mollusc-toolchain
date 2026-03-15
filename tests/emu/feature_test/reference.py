@@ -1,1 +1,1 @@
-print((0).to_bytes(4, 'little').decode('ascii'), end='')
+print((0x11).to_bytes(4, 'little').decode('ascii'), end='')

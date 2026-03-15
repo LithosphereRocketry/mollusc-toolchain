@@ -74,6 +74,9 @@ const char* arch_regnames[] = {
 };
 
 const char* arch_mmnames[] = {
+    [MM_WORD] = "w",
+    [MM_BYTE] = "b",
+    [MM_HALF] = "h",
     [MM_CR] = "cr"
 };
 
