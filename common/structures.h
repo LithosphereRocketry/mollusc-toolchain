@@ -69,6 +69,15 @@ void sm_destroy(struct string_map* sm);
 // Print the internal representation of the stringmap. For debugging.
 void sm_print(const struct string_map* sm);
 
+// Functions that access the internal string table, which is formatted in an ELF
+// friendly way
+size_t sm_stsize(const struct string_map* sm);
+
+// Unclear what the specified semantics of this should be. In practice, it lives
+// until the string_map is realloc'd, which only can happen when adding a key,
+// so maybe that's a reasonable option?
+const char* sm_stringtable(const struct string_map* sm);
+
 // UTILITY FUNCTIONS
 
 /**
@@ -77,6 +86,8 @@ void sm_print(const struct string_map* sm);
  */
 void sm_foreach(const struct string_map* sm,
         void (*func)(void*, const char*, void*), void* global);
+
+size_t sm_size(const struct string_map* sm);
 
 /**
  * In-place, remove each element of the map for which func(key, value) returns

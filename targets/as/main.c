@@ -72,9 +72,9 @@ int main(int argc, char** argv) {
     }
 
     if(arg_bin.result.present) {
-        struct bin_section* textbin = sm_get(&bin_sections, "text");
+        struct bin_section* textbin = sm_get(&bin_sections, ".text");
         if(!textbin) {
-            fprintf(stderr, "No text section in assembly!\n");
+            fprintf(stderr, "No .text section in assembly!\n");
             exit(-1);
         }
         if(textbin->relocations.len > 0) {
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
         fwrite(vector_table, sizeof(arch_word_t), 32, outfile);
         fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
     } else {
-        // elf_write(outfile, &bin_sections);
+        elf_write(outfile, &bin_sections, ET_REL);
     }
     fclose(outfile);
 

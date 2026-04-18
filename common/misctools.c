@@ -8,3 +8,8 @@ uint32_t signExtend(uint32_t value, uint32_t bits) {
 		return value & ~mask;
 	}
 }
+
+size_t align_roundup(size_t n, size_t base) {
+	size_t nudged_n = n + base - 1;
+	return nudged_n - (nudged_n % base);
+}

@@ -93,7 +93,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             char* name;
             const char* end_name = parse_name(nextpos, &name);
             if(!end_name) {
-                parse_err("Unrecognized syntax in section declaration",
+                parse_err("Unrecognized syntax in global declaration",
                         fn, text, lineno);
                 exit(-1);
             }

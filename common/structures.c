@@ -216,6 +216,14 @@ void sm_print(const struct string_map* sm) {
     }
 }
 
+size_t sm_stsize(const struct string_map* sm) {
+    return sm->_key_buffer_len;
+}
+
+const char* sm_stringtable(const struct string_map* sm) {
+    return sm->_key_buffer;
+}
+
 void sm_foreach(const struct string_map* sm,
         void (*func)(void*, const char*, void*), void* global) {
     for(size_t i = 0; i < sm->_entries; i++) {
@@ -225,6 +233,10 @@ void sm_foreach(const struct string_map* sm,
             e = e->next;
         }
     }
+}
+
+size_t sm_size(const struct string_map* sm) {
+    return sm->_count;
 }
 
 void sm_filter(struct string_map* sm, bool (*func)(const char*, const void*)) {

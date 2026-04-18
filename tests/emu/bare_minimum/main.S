@@ -1,5 +1,5 @@
 
-.section text
+.section .text
 #include "../platform.inc"
 
 _start:

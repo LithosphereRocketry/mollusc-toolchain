@@ -7,7 +7,8 @@
 #include "strtools.h"
 
 static bool valid_in_name(char c, size_t pos) {
-    return c == '_'
+    return c == '.'
+        || c == '_'
         || isalpha(c)
         || (isdigit(c) && pos != 0);
 }
