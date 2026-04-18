@@ -69,7 +69,6 @@ bool assemble_pd(struct bin_section* res, size_t offs, const char* arg) {
         return false;
     } else {
         if(invert) reg |= 1<<3;
-        printf("%zu", reg);
         res->data[offs] |= reg << 24;
         return true;
     }

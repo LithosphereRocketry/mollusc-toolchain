@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     struct parse_result parsed = asm_parse(filetext, filename);
     free(filetext);
 
-    struct string_map bin_sections = sm_make();
+    struct string_map bin_sections = sm_make(); // struct bin_section*
     sm_foreach(&parsed.sections, assemble_section, &bin_sections);
 
     const char* outname = "a.out";

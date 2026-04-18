@@ -17,6 +17,23 @@
 
 // }
 
+struct elf_write_strtab_context {
+    FILE* f;
+    struct string_map section_starting_offsets; // size_t
+    Elf32_Shdr* section_header;
+};
+
+void elf_write_strtab_func(void* ctx, const char* name, void* value) {
+    (void) name;
+    struct elf_write_strtab_context* context = ctx;
+    struct bin_section* section = value;
+    sm_put(&context->section_starting_offsets, name,
+            (void*) context->section_header->sh_size, false);
+    size_t strtab_size = sm_stsize(&section->labels);
+    fwrite(sm_stringtable(&section->labels), 1, strtab_size, context->f);
+    context->section_header->sh_size += strtab_size;
+}
+
 static const Elf32_Shdr SHDR_UNDEF = {
     .sh_name = 0,
     .sh_type = SHT_NULL,
@@ -41,7 +58,7 @@ static const size_t offs_strtab = sizeof(BEFORE_STRTAB);
 static const size_t offs_symtab = sizeof(BEFORE_SYMTAB);
 #define INIT_SHSTRTAB BEFORE_SYMTAB "\0.symtab"
 static const size_t sz_init_shstrtab = sizeof(INIT_SHSTRTAB);
-
+                             // struct bin_section*
 int elf_write(FILE* f, const struct string_map* sections, Elf32_Half type) {
     if(type != ET_REL) {
         fprintf(stderr, "ELF type %i not supported\n", type);
@@ -51,7 +68,7 @@ int elf_write(FILE* f, const struct string_map* sections, Elf32_Half type) {
     // It should be possible to know how many sections we're going to use ahead
     // of time - we have a couple constant sections, and then one for each of
     // our assembly sections
-    const size_t n_sections = 2;
+    const size_t n_sections = 3; // null, shstrtab, strtab
 
 
     // === ELF header ===
@@ -107,7 +124,6 @@ int elf_write(FILE* f, const struct string_map* sections, Elf32_Half type) {
         .sh_addralign = 0,
         .sh_entsize = 0
     };
-    section_headers[1] = shdr_shstrtab;
     // Write section header names into file
     char* shstrtab_buffer = malloc(shdr_shstrtab.sh_size);
     memset(shstrtab_buffer, 0, shdr_shstrtab.sh_size);
@@ -115,12 +131,45 @@ int elf_write(FILE* f, const struct string_map* sections, Elf32_Half type) {
     memcpy(shstrtab_buffer + sz_init_shstrtab, sm_stringtable(sections),
             sm_stsize(sections));
     fwrite(shstrtab_buffer, 1, shdr_shstrtab.sh_size, f);
+    section_headers[1] = shdr_shstrtab;
+
+    
+    // === Symbol string table ===
+
+    Elf32_Shdr shdr_strtab = {
+        .sh_name = offs_strtab,
+        .sh_type = SHT_STRTAB,
+        .sh_flags = 0,
+        .sh_addr = 0,
+        .sh_offset = ftell(f),
+        .sh_size = 1,
+        .sh_link = 0,
+        .sh_addralign = 0,
+        .sh_entsize = 0
+    };
+    // ELF expects string tables to start with a null, and it makes more sense
+    // to just manually add it than to force every string table to include one
+    putc('\0', f);
+    struct elf_write_strtab_context strtab_ctx = {
+        .f = f,
+        .section_starting_offsets = sm_make(),
+        .section_header = &shdr_strtab
+    };
+    sm_foreach(sections, elf_write_strtab_func, &strtab_ctx);
+    for(size_t i = shdr_strtab.sh_size;
+            i < align_roundup(shdr_strtab.sh_size, 4); i++) putc('\0', f);
+    // This probably isn't even necessary - there's no harm in having a few dead
+    // bytes in the file - but it makes me happy
+    shdr_strtab.sh_size = align_roundup(shdr_strtab.sh_size, 4);
+    section_headers[2] = shdr_strtab;
 
 
+    // Finish by writing section headers
     Elf32_Word shoff = ftell(f);
     fwrite(section_headers, sizeof(Elf32_Shdr), n_sections, f);
     // Correct the section header location now that we know where it is
     fseek(f, offsetof(Elf32_Ehdr, e_shoff), SEEK_SET);
     fwrite(&shoff, sizeof(Elf32_Word), 1, f);
+    free(section_headers);
     return 0;
 }
