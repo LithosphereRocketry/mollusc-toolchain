@@ -7,6 +7,7 @@
 #include "asm_parse.h"
 #include "arch_elf.h"
 #include "assemble.h"
+#include "arch_link.h"
 
 argument_t arg_out = {.abbr='o', .name=NULL, .hasval=true, .result={.value = NULL},
     .help = "Filename for output"};
@@ -17,19 +18,6 @@ argument_t* args[] = {
     &arg_out,
     &arg_bin
 };
-
-void assemble_section(void* global, const char* name, void* value) {
-    struct string_map* bin_sections = global;
-    struct parse_section* section = value;
-    struct bin_section* res = malloc(sizeof(struct bin_section));
-    *res = assemble(section);
-    sm_put(bin_sections, name, res, true);
-}
-
-void destroy_asm_section(void* global, const char* name, void* res) {
-    (void) global, (void) name;
-    destroy_assembly(res);
-}
 
 int main(int argc, char** argv) {
     argc = argparse(args, sizeof(args) / sizeof(argument_t*), argc, argv);
@@ -60,8 +48,7 @@ int main(int argc, char** argv) {
     struct parse_result parsed = asm_parse(filetext, filename);
     free(filetext);
 
-    struct string_map bin_sections = sm_make(); // struct bin_section*
-    sm_foreach(&parsed.sections, assemble_section, &bin_sections);
+    struct asm_result assembled = assemble(&parsed);
 
     const char* outname = "a.out";
     if(arg_out.result.value) outname = arg_out.result.value;
@@ -72,36 +59,58 @@ int main(int argc, char** argv) {
     }
 
     if(arg_bin.result.present) {
-        struct bin_section* textbin = sm_get(&bin_sections, ".text");
-        if(!textbin) {
-            fprintf(stderr, "No .text section in assembly!\n");
-            exit(-1);
-        }
-        if(textbin->relocations.len > 0) {
-            fprintf(stderr, "Text section has unresolved labels\n");
-            print_assembly(textbin);
-            exit(-1);
-        }
-
-        struct bin_label* start_label = sm_get(&textbin->labels, "_start");
-        if(!start_label) {
-            fprintf(stderr, "Text section has no entry point\n");
-            exit(-1);
-        }
-
         arch_word_t vector_table[32];
         memset(vector_table, 0, sizeof(vector_table));
-        vector_table[0] = 32*sizeof(arch_word_t) + start_label->offset;
+
+        struct bin_section* textbin = sm_get(&assembled.sections, ".text");
+        if(!textbin) {
+            fprintf(stderr, "ROM link error: text section does not exist\n");
+            exit(-1);
+        }
+        struct bin_section* rodatabin = sm_get(&assembled.sections, ".rodata");
+
+        struct string_map rom_link_config = sm_make();
+        sm_put(&rom_link_config, ".text", (void*) sizeof(vector_table), false);
+        sm_put(&rom_link_config, ".rodata", (void*) sizeof(vector_table)
+                + textbin->data_sz*sizeof(arch_word_t), false);
+        link_file(&assembled, &rom_link_config);
+
+        struct bin_label* start_label = sm_get(&assembled.labels, "_start");
+        if(!start_label || strcmp(start_label->section, ".text")) {
+            fprintf(stderr, "ROM link error: text section has no entry point\n");
+            exit(-1);
+        }
+
+        if(textbin->relocations.len > 0) {
+            fprintf(stderr, "Could not resolve symbols in .text:\n");
+            for(size_t i = 0; i < textbin->relocations.len; i++) {
+                fprintf(stderr, "\t%s\n",
+                        ((struct relocation*) textbin->relocations.buf[i])->symbol);
+            }
+            exit(-1);
+        }
+        if(rodatabin && rodatabin->relocations.len > 0) {
+            fprintf(stderr, "Could not resolve symbols in .rodata:\n");
+            for(size_t i = 0; i < textbin->relocations.len; i++) {
+                fprintf(stderr, "\t%s\n",
+                        ((struct relocation*) textbin->relocations.buf[i])->symbol);
+            }
+            exit(-1);
+        }
+
+        vector_table[0] = sizeof(vector_table) + start_label->offset;
         fwrite(vector_table, sizeof(arch_word_t), 32, outfile);
         fwrite(textbin->data, sizeof(arch_word_t), textbin->data_sz, outfile);
+        if(rodatabin) {
+            fwrite(rodatabin->data, sizeof(arch_word_t), rodatabin->data_sz, outfile);            
+        }
+
+        sm_destroy(&rom_link_config);
+
     } else {
-        elf_write(outfile, &bin_sections, ET_REL);
+        elf_write(outfile, &assembled, ET_REL);
     }
     fclose(outfile);
-
-    
-    sm_foreach(&bin_sections, destroy_asm_section, NULL);
-    sm_destroy(&bin_sections);
     
     destroy_parse(&parsed);
 }

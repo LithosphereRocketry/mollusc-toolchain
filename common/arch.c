@@ -1,5 +1,7 @@
 #include "arch.h"
 
+#include <stdlib.h>
+
 const char* arch_mnemonics[] = {
     [I_INVALID]="[invalid]",
     [I_J] =     "j",
@@ -83,3 +85,22 @@ const char* arch_mmnames[] = {
 const char* arch_relocnames[] = {
     [RELOC_J_REL] = "RELOC_J_REL"
 };
+
+static void destroy_asm_section(void* global, const char* name, void* value) {
+    (void) global, (void) name;
+    struct bin_section* res = value;
+    for(size_t i = 0; i < res->relocations.len; i++) {
+        struct relocation* reloc = res->relocations.buf[i];
+        free((char*) reloc->symbol);
+    }
+    hl_destroy(&res->relocations, true);
+    free(res->data);
+    res->data = NULL;
+    res->data_sz = 0;
+}
+
+void destroy_assembly(struct asm_result* assem) {
+    sm_foreach(&assem->sections, destroy_asm_section, NULL);
+    sm_destroy(&assem->sections);
+    sm_destroy(&assem->labels);
+}

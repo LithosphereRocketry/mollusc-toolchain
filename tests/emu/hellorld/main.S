@@ -42,5 +42,7 @@ puts_done:
     add sp, sp, 16
     jx zero, zero, ra
 
+.section .rodata
+
 hellorld:
 .asciz "Hellorld!\n"

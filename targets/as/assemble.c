@@ -45,7 +45,7 @@ static size_t assemble_pseudoinstr(struct bin_section* dest, size_t offs, struct
                 exit(-1);
             }
             struct relocation* lur_reloc = malloc(sizeof(struct relocation));
-            lur_reloc->offset = offs;
+            lur_reloc->offset = offs << 2;
             lur_reloc->symbol = name;
             lur_reloc->type = RELOC_LUR_REL;
             hl_append(&dest->relocations, lur_reloc);
@@ -62,7 +62,7 @@ static size_t assemble_pseudoinstr(struct bin_section* dest, size_t offs, struct
                 exit(-1);
             }
             struct relocation* add_reloc = malloc(sizeof(struct relocation));
-            add_reloc->offset = offs + 1;
+            add_reloc->offset = (offs + 1) << 2;
             add_reloc->symbol = strcpy_dup(name);
             add_reloc->type = RELOC_IMM_REL;
             hl_append(&dest->relocations, add_reloc);
@@ -180,6 +180,7 @@ static size_t assemble_instr(struct bin_section* dest, size_t offs, struct parse
 }
 
 struct transfer_asm_label_global {
+    const char* section_name;
     struct string_map* relative_syms;
     size_t* offset_map;
 };
@@ -188,6 +189,7 @@ static void transfer_asm_label(void* global, const char* key, void* value) {
     struct transfer_asm_label_global* info = global;
     size_t offset = info->offset_map[((size_t) value)] * sizeof(arch_word_t);
     struct bin_label* label = malloc(sizeof(struct bin_label));
+    label->section = info->section_name;
     label->offset = offset;
     label->flags = BL_RELATIVE;
     sm_put(info->relative_syms, key, label, true);
@@ -199,10 +201,10 @@ static bool bl_is_exported(const char* key, const void* value) {
     return lbl->flags & BL_EXPORTED;
 }
 
-struct bin_section assemble(const struct parse_section* parse) {
+struct bin_section assemble_section(struct string_map* labels, const struct parse_section* parse) {
     struct bin_section res = {
         .relocations = hl_make(),
-        .labels = sm_make(),
+        .name = parse->name,
         .data_sz = 0,
         .data = NULL
     };
@@ -221,7 +223,8 @@ struct bin_section assemble(const struct parse_section* parse) {
     }
 
     struct transfer_asm_label_global transfer_info = {
-        .relative_syms = &res.labels,
+        .section_name = parse->name,
+        .relative_syms = labels,
         .offset_map = instr_offsets
     };
 
@@ -230,13 +233,34 @@ struct bin_section assemble(const struct parse_section* parse) {
 
     for(size_t i = 0; i < parse->globals.len; i++) {
         const char* glb = parse->globals.buf[i];
-        struct bin_label* lbl = sm_get(&res.labels, glb);
-        if(lbl) lbl->flags |= BL_EXPORTED;
+        struct bin_label* lbl = sm_get(labels, glb);
+        if(lbl) {
+            lbl->flags |= BL_EXPORTED;
+        } else {
+            
+        }
     }
 
     res.data_sz = offset_word;
     if(res.data) res.data = realloc(res.data, res.data_sz * sizeof(arch_word_t));
-    link_section(&res);
+    link_section(labels, &res, NULL);
+    return res;
+}
+
+static void assemble_section_iter(void* global, const char* name, void* value) {
+    struct asm_result* context = global;
+    struct parse_section* section = value;
+    struct bin_section* res = malloc(sizeof(struct bin_section));
+    *res = assemble_section(&context->labels, section);
+    sm_put(&context->sections, name, res, true);
+}
+
+struct asm_result assemble(const struct parse_result* parse) {
+    struct asm_result res = {
+        .labels = sm_make(),
+        .sections = sm_make()
+    };
+    sm_foreach(&parse->sections, assemble_section_iter, &res);
     return res;
 }
 
@@ -244,26 +268,14 @@ static const char* rel_enum_names[] = {
     [RELOC_J_REL] = "RELOC_J_REL"
 };
 
-void print_assembly(const struct bin_section* res) {
-    printf("RELOCATIONS\n");
-    for(size_t i = 0; i < res->relocations.len; i++) {
-        struct relocation* reloc = res->relocations.buf[i];
-        printf("\t%s %s %zu\n", rel_enum_names[reloc->type], reloc->symbol, reloc->offset);
-    }
-    printf("BINARY\n");
-    for(size_t i = 0; i < res->data_sz; i++) {
-        printf("\t%0*x\n", (int) sizeof(arch_word_t)*2, res->data[i]);
-    }
-}
-
-void destroy_assembly(struct bin_section* res) {
-    for(size_t i = 0; i < res->relocations.len; i++) {
-        struct relocation* reloc = res->relocations.buf[i];
-        free((char*) reloc->symbol);
-    }
-    hl_destroy(&res->relocations, true);
-    sm_destroy(&res->labels);
-    free(res->data);
-    res->data = NULL;
-    res->data_sz = 0;
-}
+// void print_assembly(const struct bin_section* res) {
+//     printf("RELOCATIONS\n");
+//     for(size_t i = 0; i < res->relocations.len; i++) {
+//         struct relocation* reloc = res->relocations.buf[i];
+//         printf("\t%s %s %zu\n", rel_enum_names[reloc->type], reloc->symbol, reloc->offset);
+//     }
+//     printf("BINARY\n");
+//     for(size_t i = 0; i < res->data_sz; i++) {
+//         printf("\t%0*x\n", (int) sizeof(arch_word_t)*2, res->data[i]);
+//     }
+// }

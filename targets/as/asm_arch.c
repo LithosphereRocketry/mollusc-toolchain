@@ -101,7 +101,7 @@ static bool assemble_immj(struct bin_section* res, size_t offs, const char* arg)
             struct relocation* reloc = malloc(sizeof(struct relocation));
             reloc->type = RELOC_J_REL;
             reloc->symbol = name;
-            reloc->offset = offs;
+            reloc->offset = offs << 2;
             hl_append(&res->relocations, reloc);
             return true;
         } else {

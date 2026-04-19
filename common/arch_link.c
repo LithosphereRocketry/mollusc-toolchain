@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "misctools.h"
 
@@ -13,42 +14,81 @@ static void reloc_err(const char* msg, const char* filename, size_t lineno, stru
 static const size_t IMM_MASK = ((1 << 10) - 1);
 static const size_t LONG_MASK = ((1 << 22) - 1);
 
-void link_section(struct bin_section* section) {
+void link_section(struct string_map* labels, struct bin_section* section, const struct string_map* section_offsets) {
+    struct string_map dummy_sm;
+    if(!section_offsets) {
+        // If we're passed null section offsets, make an empty map of section
+        // offsets and use that (for convenience)
+        dummy_sm = sm_make();
+        section_offsets = &dummy_sm;
+    }
+
     size_t remaining = section->relocations.len;
     for(size_t i = 0; i < section->relocations.len; i++) {
         struct relocation* reloc = section->relocations.buf[i];
-        if(sm_haskey(&section->labels, reloc->symbol)) {
-            struct bin_label* label = sm_get(&section->labels, reloc->symbol);
+        if(sm_haskey(labels, reloc->symbol)) {
+            struct bin_label* label = sm_get(labels, reloc->symbol);
+        
+            // Figure out what we know about the source and destination addr
+            bool know_abs, know_rel;
+            size_t offs_abs;
+            long long offs_rel;
+            // We can get relative offset by either knowing both the source and
+            // destination section locations, or by both being in the same 
+            // section
+            if(!strcmp(section->name, label->section)) {
+                know_rel = true;
+                offs_rel = label->offset - reloc->offset;
+            } else if(sm_haskey(section_offsets, section->name)
+                   && sm_haskey(section_offsets, label->section)) {
+                know_rel = true;
+                offs_rel = (label->offset + (size_t) sm_get(section_offsets, label->section))
+                         - (reloc->offset + (size_t) sm_get(section_offsets, section->name));
+            } else {
+                know_rel = false;
+            }
+            if(sm_haskey(section_offsets, label->section)) {
+                know_abs = true;
+                offs_abs = label->offset + (size_t) sm_get(section_offsets, section->name);
+            } else {
+                know_abs = false;
+            }
+
             size_t target = label->offset;
             switch(reloc->type) {
                 case RELOC_J_REL: {
+                    if(!know_rel) continue;
                     if((target & 0b11) != 0) {
                         reloc_err("Relocation has unaligned target", "todo", 0, reloc);
                         exit(-1);
                     }
-                    size_t field_offset = (section->data[reloc->offset] & LONG_MASK) << 2;
-                    section->data[reloc->offset] &= ~LONG_MASK; 
-                    size_t disp_words = ((target + field_offset) >> 2) - reloc->offset;
+                    size_t field_offset = (section->data[reloc->offset >> 2] & LONG_MASK) << 2;
+                    size_t disp_words = (offs_rel + field_offset) >> 2;
                     arch_word_t disp_trimmed = disp_words & LONG_MASK;
                     // if(...) {
                     //     reloc_err("Relocation out of range", "todo", 0, target, reloc);
                     //     exit
                     // }
-                    section->data[reloc->offset] |= disp_trimmed;
+                    section->data[reloc->offset >> 2] &= ~LONG_MASK; 
+                    section->data[reloc->offset >> 2] |= disp_trimmed;
                 } break;
                 case RELOC_LUR_REL: {
-                    size_t field_offset = (section->data[reloc->offset] & LONG_MASK) << 10;
-                    section->data[reloc->offset] &= ~LONG_MASK; 
-                    size_t disp = (target + field_offset) - (reloc->offset << 2);
+                    if(!know_rel) continue;
+                    size_t field_offset = (section->data[reloc->offset >> 2] & LONG_MASK) << 10;
+                    size_t disp = offs_rel + field_offset;
                     arch_word_t disp_trimmed = (disp >> 10) & LONG_MASK;
-                    section->data[reloc->offset] |= disp_trimmed;
+
+                    section->data[reloc->offset >> 2] &= ~LONG_MASK; 
+                    section->data[reloc->offset >> 2] |= disp_trimmed;
                 } break;
                 case RELOC_IMM_REL: {
-                    size_t field_offset = signExtend(section->data[reloc->offset] & LONG_MASK, 10);
-                    section->data[reloc->offset] &= ~IMM_MASK;
-                    size_t disp = (target + field_offset) - (reloc->offset << 2);
+                    if(!know_rel) continue;
+                    size_t field_offset = signExtend(section->data[reloc->offset >> 2] & LONG_MASK, 10);
+                    size_t disp = offs_rel + field_offset;
                     arch_word_t disp_trimmed = disp & IMM_MASK;
-                    section->data[reloc->offset] |= disp_trimmed;
+
+                    section->data[reloc->offset >> 2] &= ~IMM_MASK;
+                    section->data[reloc->offset >> 2] |= disp_trimmed;
                 } break;
                 default:
                     printf("Unrecognized relocation type %i\n", reloc->type);
@@ -57,15 +97,12 @@ void link_section(struct bin_section* section) {
             free(reloc);
             section->relocations.buf[i] = NULL;
             remaining --;
-        } else {
-            printf("Can't find label %s, skipping\n", reloc->symbol);
-            continue;
         }
     }
     struct relocation** new_relocs = remaining == 0 ? NULL : malloc(remaining * sizeof(struct relocation*));
     struct relocation** old_word_ptr = (struct relocation**) section->relocations.buf;
     for(size_t i = 0; i < remaining; i++) {
-        while(!section->relocations.buf[i]) old_word_ptr++;
+        while(!(*old_word_ptr)) old_word_ptr++;
         new_relocs[i] = *old_word_ptr;
         old_word_ptr++;
     }
@@ -73,4 +110,24 @@ void link_section(struct bin_section* section) {
     section->relocations.buf = (void**) new_relocs;
     section->relocations.len = remaining;
     section->relocations._cap = remaining;
+}
+
+struct link_file_iter_context {
+    struct string_map* labels;
+    struct string_map* section_offsets;
+};
+
+static void link_file_iter(void* ctx, const char* name, void* value) {
+    struct link_file_iter_context* context = ctx;
+    (void) name;
+    struct bin_section* section = value;
+    link_section(context->labels, section, context->section_offsets);
+}
+
+void link_file(struct asm_result* binfile, const struct string_map* section_offsets) {
+    struct link_file_iter_context ctx = {
+        .labels = &binfile->labels,
+        .section_offsets = section_offsets
+    };
+    sm_foreach(&binfile->sections, link_file_iter, &ctx);
 }

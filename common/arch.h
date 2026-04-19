@@ -70,7 +70,7 @@ enum reloc_type {
 struct relocation {
     enum reloc_type type;
     const char* symbol;
-    size_t offset; // words
+    size_t offset; // bytes
 };
 
 enum arch_memmodes {
@@ -92,16 +92,24 @@ enum bin_label_flags {
 };
 
 struct bin_label {
+    const char* section;
     size_t offset; // bytes
     enum bin_label_flags flags;
 };
 
 struct bin_section {
     struct heap_list relocations; // struct relocation*
-    struct string_map labels; // struct bin_label*
+    const char* name;
     size_t data_sz;
     arch_word_t* data;
 };
+
+struct asm_result {
+    struct string_map labels; // struct bin_label*
+    struct string_map sections; // struct bin_section*
+};
+
+void destroy_assembly(struct asm_result* assem);
 
 extern const char* arch_mnemonics[N_INSTRS];
 extern const arch_word_t arch_basebits[N_INSTRS];
