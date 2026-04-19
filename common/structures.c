@@ -224,6 +224,20 @@ const char* sm_stringtable(const struct string_map* sm) {
     return sm->_key_buffer;
 }
 
+size_t sm_stoffs(const struct string_map* sm, const char* key) {
+    if(key >= sm->_key_buffer && key < sm->_key_buffer + sm->_key_buffer_len) {
+        // Fast path for cases where the string is literally inside the string
+        // table
+        return key - sm->_key_buffer;
+    }
+    struct string_map_entry* ent = sm_getent(sm, key);
+    if(ent) {
+        return ent->key_offs;
+    } else {
+        return -1;
+    }
+}
+
 void sm_foreach(const struct string_map* sm,
         void (*func)(void*, const char*, void*), void* global) {
     for(size_t i = 0; i < sm->_entries; i++) {

@@ -36,22 +36,35 @@ void link_section(struct string_map* labels, struct bin_section* section, const 
             // We can get relative offset by either knowing both the source and
             // destination section locations, or by both being in the same 
             // section
-            if(!strcmp(section->name, label->section)) {
-                know_rel = true;
-                offs_rel = label->offset - reloc->offset;
-            } else if(sm_haskey(section_offsets, section->name)
-                   && sm_haskey(section_offsets, label->section)) {
-                know_rel = true;
-                offs_rel = (label->offset + (size_t) sm_get(section_offsets, label->section))
-                         - (reloc->offset + (size_t) sm_get(section_offsets, section->name));
-            } else {
-                know_rel = false;
-            }
-            if(sm_haskey(section_offsets, label->section)) {
-                know_abs = true;
-                offs_abs = label->offset + (size_t) sm_get(section_offsets, section->name);
-            } else {
+            // A label relative to the section NULL is an absolute label, so we
+            // know its offset (it's always 0)
+            if(label->flags & BL_UNDEF) {
                 know_abs = false;
+                know_rel = false;
+            } else {
+                if(label->section == NULL && sm_haskey(section_offsets, section->name)) {
+                    know_rel = true;
+                    offs_rel = label->offset - (reloc->offset + (size_t) sm_get(section_offsets, section->name));
+                } else if(!strcmp(section->name, label->section)) {
+                    know_rel = true;
+                    offs_rel = label->offset - reloc->offset;
+                } else if(sm_haskey(section_offsets, section->name)
+                    && sm_haskey(section_offsets, label->section)) {
+                    know_rel = true;
+                    offs_rel = (label->offset + (size_t) sm_get(section_offsets, label->section))
+                            - (reloc->offset + (size_t) sm_get(section_offsets, section->name));
+                } else {
+                    know_rel = false;
+                }
+                if(label->section == NULL) {
+                    know_abs = true;
+                    offs_abs = label->offset;
+                } else if(sm_haskey(section_offsets, label->section)) {
+                    know_abs = true;
+                    offs_abs = label->offset + (size_t) sm_get(section_offsets, section->name);
+                } else {
+                    know_abs = false;
+                }
             }
 
             size_t target = label->offset;

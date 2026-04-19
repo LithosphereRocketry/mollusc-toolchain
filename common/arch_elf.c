@@ -40,12 +40,13 @@ struct elf_unroll_section_context {
 static void elf_unroll_sections(void* ctx, const char* name, void* value) {
     struct elf_unroll_section_context* context = ctx;
     struct bin_section* section = value;
-    sm_put(&context->unroll_lookup, name, context->len, false);
+    sm_put(&context->unroll_lookup, name, (void*) context->len, false);
     context->sections[context->len].name = name;
     context->sections[context->len].section = section;
     context->len ++;
 }
 
+static const size_t n_static_sections = 4;
 // Initial contents of section header string table - names of sections that are
 // implied rather than being part of the assembly
 // Do a bit of #define fuckery to make these offsets not hardcoded
@@ -57,6 +58,50 @@ static const size_t offs_strtab = sizeof(BEFORE_STRTAB);
 static const size_t offs_symtab = sizeof(BEFORE_SYMTAB);
 #define INIT_SHSTRTAB BEFORE_SYMTAB "\0.symtab"
 static const size_t sz_init_shstrtab = sizeof(INIT_SHSTRTAB);
+
+#define REL_PREFIX ".rel"
+
+struct elf_create_symtab_context {
+    struct string_map* symbols;
+    struct string_map* section_idxs;
+    Elf32_Sym* buf;
+    size_t idx;
+    size_t last_local;
+};
+static void elf_create_symtab(void* ctx, const char* name, void* value) {
+    struct elf_create_symtab_context* context = ctx;
+    struct bin_label* lbl = value;
+
+    Elf32_Section section;
+    if(lbl->flags & BL_UNDEF) {
+        section = SHN_UNDEF;
+    } else if(lbl->section == NULL) {
+        section = SHN_ABS;
+    } else {
+        section = n_static_sections + (size_t) sm_get(context->section_idxs, lbl->section);
+    }
+
+    Elf32_Sym sym = {
+        // Offset is shifted by 1 due to null
+        // We shouldn't need to error check this because name is guaranteed to
+        // come from symbols
+        .st_name = sm_stoffs(context->symbols, name) + 1,
+        .st_value = lbl->offset,
+        .st_size = 0,
+        .st_info = ELF32_ST_INFO(
+            (lbl->flags & BL_EXPORTED) ? STB_GLOBAL : STB_LOCAL,
+            (lbl->flags & BL_SECTION) ? STT_SECTION : STT_NOTYPE
+        ),
+        .st_other = 0,
+        .st_shndx = section
+    };
+    context->buf[context->idx] = sym;
+    context->idx ++;
+    if(!(lbl->flags & BL_EXPORTED)) {
+        context->last_local = context->idx;
+    }
+}
+
 int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     if(type != ET_REL) {
         fprintf(stderr, "ELF type %i not supported\n", type);
@@ -76,7 +121,8 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     // It should be possible to know how many sections we're going to use ahead
     // of time - we have a couple constant sections, and then one for each of
     // our assembly sections
-    const size_t n_sections = 3; // null, shstrtab, strtab
+    // null, shstrtab, strtab, symtab, [file sections, file relocs] 
+    const size_t n_sections = 4;
 
 
     // === ELF header ===
@@ -116,6 +162,7 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
 
     // === Section header string table ===
 
+    size_t shstrtab_non_rel_sz = sz_init_shstrtab + sm_stsize(&bin->sections);
     const Elf32_Shdr shdr_shstrtab = {
         .sh_name = offs_shstrtab,
         .sh_type = SHT_STRTAB,
@@ -126,7 +173,8 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
         .sh_offset = ftell(f),
         // my implementation guarantees that the string table in my hashtable is
         // sufficiently ELF-shaped to just use
-        .sh_size = align_roundup(sz_init_shstrtab + sm_stsize(&bin->sections), 4),
+        .sh_size = align_roundup(shstrtab_non_rel_sz + sm_stsize(&bin->sections)
+                 + sm_size(&bin->sections)*strlen(REL_PREFIX), 4),
         .sh_link = 0, // I don't think a section header string table needs any
         // linking information
         .sh_addralign = 0,
@@ -138,8 +186,15 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     memcpy(shstrtab_buffer, INIT_SHSTRTAB, sz_init_shstrtab);
     memcpy(shstrtab_buffer + sz_init_shstrtab, sm_stringtable(&bin->sections),
             sm_stsize(&bin->sections));
+    char* shstrtab_offs = shstrtab_buffer + sz_init_shstrtab + sm_stsize(&bin->sections);
+    for(size_t i = 0; i < sm_size(&bin->sections); i++) {
+        int incr;
+        sprintf(shstrtab_offs, REL_PREFIX "%s%n", unrolled.sections[i].name, &incr);
+        shstrtab_offs += incr;
+    }
     fwrite(shstrtab_buffer, 1, shdr_shstrtab.sh_size, f);
     section_headers[1] = shdr_shstrtab;
+    free(shstrtab_buffer);
 
     
     // === Symbol string table ===
@@ -169,8 +224,33 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
 
 
     // === Symbol table ===
-    // for(size_t i = 0; i < )
 
+    Elf32_Shdr shdr_symtab = {
+        .sh_name = offs_symtab,
+        .sh_type = SHT_SYMTAB,
+        .sh_flags = 0,
+        .sh_addr = 0,
+        .sh_offset = ftell(f),
+        .sh_size = sizeof(Elf32_Sym) * (1 + sm_size(&bin->labels)),
+        .sh_link = 2,
+        .sh_addralign = 0,
+        .sh_entsize = sizeof(Elf32_Sym)
+    };
+    Elf32_Sym* symbols = malloc(sizeof(Elf32_Sym) * (1 + sm_size(&bin->labels)));
+    symbols[0] = SYM_UNDEF;
+    struct elf_create_symtab_context symtab_ctx = {
+        .buf = symbols,
+        .idx = 1,
+        .section_idxs = &unrolled.unroll_lookup,
+        .symbols = &bin->labels,
+        .last_local = 0
+    };
+    sm_foreach(&bin->labels, elf_create_symtab, &symtab_ctx);
+    shdr_symtab.sh_info = symtab_ctx.last_local;
+    fwrite(symbols, sizeof(Elf32_Sym), (1 + sm_size(&bin->labels)), f);
+    section_headers[3] = shdr_symtab;
+
+    free(symbols);
 
     // Finish by writing section headers
     Elf32_Word shoff = ftell(f);

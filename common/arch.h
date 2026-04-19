@@ -87,8 +87,9 @@ enum arch_memmodes {
 };
 
 enum bin_label_flags {
-    BL_RELATIVE = (1 << 0),
-    BL_EXPORTED = (1 << 1)
+    BL_UNDEF = (1 << 0),
+    BL_EXPORTED = (1 << 1),
+    BL_SECTION = (1 << 2)
 };
 
 struct bin_label {

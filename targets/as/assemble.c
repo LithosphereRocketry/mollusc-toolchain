@@ -179,6 +179,28 @@ static size_t assemble_instr(struct bin_section* dest, size_t offs, struct parse
     return 1;
 }
 
+static void add_label(struct string_map* labels, const char* name, const char* section,
+            size_t offset, enum bin_label_flags flags) {
+    struct bin_label* label = sm_get(labels, name);
+    if(label) {
+        if(label->flags & BL_UNDEF) {
+            label->section = section;
+            label->offset = offset;
+            label->flags &= ~BL_UNDEF;
+            label->flags |= flags;
+        } else {
+            fprintf(stderr, "Error: redefinition of label %s\n", name);
+            exit(-1);
+        }
+    } else {
+        label = malloc(sizeof(struct bin_label));
+        label->section = section;
+        label->offset = offset;
+        label->flags = flags;
+        sm_put(labels, name, label, true);
+    }
+}
+
 struct transfer_asm_label_global {
     const char* section_name;
     struct string_map* relative_syms;
@@ -189,10 +211,7 @@ static void transfer_asm_label(void* global, const char* key, void* value) {
     struct transfer_asm_label_global* info = global;
     size_t offset = info->offset_map[((size_t) value)] * sizeof(arch_word_t);
     struct bin_label* label = malloc(sizeof(struct bin_label));
-    label->section = info->section_name;
-    label->offset = offset;
-    label->flags = BL_RELATIVE;
-    sm_put(info->relative_syms, key, label, true);
+    add_label(info->relative_syms, key, info->section_name, offset, 0);
 }
 
 static bool bl_is_exported(const char* key, const void* value) {
@@ -237,7 +256,13 @@ struct bin_section assemble_section(struct string_map* labels, const struct pars
         if(lbl) {
             lbl->flags |= BL_EXPORTED;
         } else {
-            
+            // If the label doesn't exist, make a dummy entry for it that can
+            // be filled in later
+            lbl = malloc(sizeof(struct bin_label));
+            lbl->section = NULL;
+            lbl->offset = 0;
+            lbl->flags = BL_EXPORTED | BL_UNDEF;
+            sm_put(labels, glb, lbl, true);
         }
     }
 
@@ -252,11 +277,7 @@ static void assemble_section_iter(void* global, const char* name, void* value) {
     struct parse_section* section = value;
 
     // At this point, also add a label representing the start of the section
-    struct bin_label* lbl = malloc(sizeof(struct bin_label));
-    lbl->flags = 0;
-    lbl->offset = 0;
-    lbl->section = name;
-    sm_put(&context->labels, name, lbl, true);
+    add_label(&context->labels, name, name, 0, BL_SECTION);
 
     struct bin_section* res = malloc(sizeof(struct bin_section));
     *res = assemble_section(&context->labels, section);

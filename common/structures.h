@@ -78,6 +78,10 @@ size_t sm_stsize(const struct string_map* sm);
 // so maybe that's a reasonable option?
 const char* sm_stringtable(const struct string_map* sm);
 
+// Converts a string to an offset in the string table
+// Returns -1 if the key isn't present
+size_t sm_stoffs(const struct string_map* sm, const char* key);
+
 // UTILITY FUNCTIONS
 
 /**
