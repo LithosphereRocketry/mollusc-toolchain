@@ -250,6 +250,14 @@ struct bin_section assemble_section(struct string_map* labels, const struct pars
 static void assemble_section_iter(void* global, const char* name, void* value) {
     struct asm_result* context = global;
     struct parse_section* section = value;
+
+    // At this point, also add a label representing the start of the section
+    struct bin_label* lbl = malloc(sizeof(struct bin_label));
+    lbl->flags = 0;
+    lbl->offset = 0;
+    lbl->section = name;
+    sm_put(&context->labels, name, lbl, true);
+
     struct bin_section* res = malloc(sizeof(struct bin_section));
     *res = assemble_section(&context->labels, section);
     sm_put(&context->sections, name, res, true);
