@@ -56,7 +56,7 @@ test-emu: $(EMU_TESTS)
 %.tab.c: %.yacc
 	yacc -o $@ $<
 
-$(EXAMPLE_DIR)/%.o: $(EXAMPLE_DIR)/%.s out/as
+%.o: %.s out/as
 	out/as -o $@ $<
 
 %.o: %.c

@@ -144,13 +144,15 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     
     // === Symbol string table ===
 
+    const char* strtab_data = sm_stringtable(&bin->labels);
+    size_t strtab_dsize = sm_stsize(&bin->labels);
     Elf32_Shdr shdr_strtab = {
         .sh_name = offs_strtab,
         .sh_type = SHT_STRTAB,
         .sh_flags = 0,
         .sh_addr = 0,
         .sh_offset = ftell(f),
-        .sh_size = align_roundup(1 + sm_stsize(&bin->labels), 4),
+        .sh_size = align_roundup(1 + strtab_dsize, 4),
         .sh_link = 0,
         .sh_addralign = 0,
         .sh_entsize = 0
@@ -158,13 +160,10 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     // ELF expects string tables to start with a null, and it makes more sense
     // to just manually add it than to force every string table to include one
     putc('\0', f);
-    fwrite(sm_stringtable(&bin->labels), 1, shdr_strtab.sh_size, f);
-    for(size_t i = shdr_strtab.sh_size;
-            i < align_roundup(shdr_strtab.sh_size, 4); i++) {
+    fwrite(strtab_data, 1, strtab_dsize, f);
+    for(size_t i = 1 + strtab_dsize; i < shdr_strtab.sh_size; i++) {
+        // pad out so that the next section starts on a word boundary
         putc('\0', f);
-        // This probably isn't even necessary - there's no harm in having a few dead
-        // bytes in the file - but it makes me happy
-        shdr_strtab.sh_size ++;
     }
     section_headers[2] = shdr_strtab;
 
