@@ -62,8 +62,9 @@ static const size_t sz_init_shstrtab = sizeof(INIT_SHSTRTAB);
 #define REL_PREFIX ".rel"
 
 struct elf_create_symtab_context {
-    struct string_map* symbols;
-    struct string_map* section_idxs;
+    const struct string_map* symbols;
+    const struct string_map* section_idxs;
+    struct string_map* sym_offsets;
     Elf32_Sym* buf;
     size_t idx;
     size_t last_local;
@@ -78,7 +79,7 @@ static void elf_create_symtab(void* ctx, const char* name, void* value) {
     } else if(lbl->section == NULL) {
         section = SHN_ABS;
     } else {
-        section = n_static_sections + (size_t) sm_get(context->section_idxs, lbl->section);
+        section = n_static_sections + 2*(size_t) sm_get(context->section_idxs, lbl->section);
     }
 
     Elf32_Sym sym = {
@@ -96,10 +97,65 @@ static void elf_create_symtab(void* ctx, const char* name, void* value) {
         .st_shndx = section
     };
     context->buf[context->idx] = sym;
+    sm_put(context->sym_offsets, name, (void*) context->idx, false);
     context->idx ++;
     if(!(lbl->flags & BL_EXPORTED)) {
         context->last_local = context->idx;
     }
+}
+
+struct elf_create_section_context {
+    FILE* f;
+    size_t symtab_idx;
+    const struct string_map* section_map;
+    const struct string_map* rel_section_map;
+    const struct string_map* sym_offsets;
+    Elf32_Shdr* header_buf;
+    size_t section_idx;
+};
+static void elf_create_section(void* ctx, const char* name, void* value) {
+    struct elf_create_section_context* context = ctx;
+    struct bin_section* section = value;
+    // Binary section
+    Elf32_Shdr bheader = {
+        .sh_name = sm_stoffs(context->section_map, name) + sz_init_shstrtab,
+        .sh_type = SHT_PROGBITS,
+        .sh_flags = 0, // todo: this probably needs to be changed
+        .sh_addr = 0,
+        .sh_offset = ftell(context->f),
+        .sh_size = section->data_sz * sizeof(arch_word_t),
+        .sh_link = SHN_UNDEF,
+        .sh_info = 0,
+        .sh_addralign = 4,
+        .sh_entsize = 0
+    };
+    fwrite(section->data, sizeof(arch_word_t), section->data_sz, context->f);
+    context->header_buf[context->section_idx] = bheader;
+    context->section_idx ++;
+
+    // Relocation section
+    Elf32_Shdr rheader = {
+        .sh_name = (size_t) sm_get(context->rel_section_map, name),
+        .sh_type = SHT_REL,
+        .sh_flags = 0,
+        .sh_addr = 0,
+        .sh_offset = ftell(context->f),
+        .sh_size = section->relocations.len * sizeof(Elf32_Rel),
+        .sh_link = context->symtab_idx,
+        .sh_info = context->section_idx-1,
+        .sh_addralign = 0,
+        .sh_entsize = sizeof(Elf32_Rel)
+    };
+    for(size_t i = 0; i < section->relocations.len; i++) {
+        struct relocation* rel = section->relocations.buf[i];
+        Elf32_Rel elfrel = {
+            .r_offset = rel->offset,
+            .r_info = ELF32_R_INFO((size_t) sm_get(context->sym_offsets, rel->symbol), rel->type)
+        };
+        fwrite(&elfrel, sizeof(Elf32_Rel), 1, context->f);
+    }
+    context->header_buf[context->section_idx] = rheader;
+    context->section_idx ++;    
 }
 
 int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
@@ -122,8 +178,8 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     // of time - we have a couple constant sections, and then one for each of
     // our assembly sections
     // null, shstrtab, strtab, symtab, [file sections, file relocs] 
-    const size_t n_sections = 4;
-
+    const size_t n_sections = 4 + 2*sm_size(&bin->sections);
+    // Sections are arranged as code followed by relocations
 
     // === ELF header ===
 
@@ -186,11 +242,13 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     memcpy(shstrtab_buffer, INIT_SHSTRTAB, sz_init_shstrtab);
     memcpy(shstrtab_buffer + sz_init_shstrtab, sm_stringtable(&bin->sections),
             sm_stsize(&bin->sections));
-    char* shstrtab_offs = shstrtab_buffer + sz_init_shstrtab + sm_stsize(&bin->sections);
+    size_t shstrtab_offs = sz_init_shstrtab + sm_stsize(&bin->sections);
+    struct string_map rel_offset_map = sm_make();
     for(size_t i = 0; i < sm_size(&bin->sections); i++) {
         int incr;
-        sprintf(shstrtab_offs, REL_PREFIX "%s%n", unrolled.sections[i].name, &incr);
-        shstrtab_offs += incr;
+        sprintf(shstrtab_buffer + shstrtab_offs, REL_PREFIX "%s%n", unrolled.sections[i].name, &incr);
+        sm_put(&rel_offset_map, unrolled.sections[i].name, (void*) shstrtab_offs, false);
+        shstrtab_offs += incr+1;
     }
     fwrite(shstrtab_buffer, 1, shdr_shstrtab.sh_size, f);
     section_headers[1] = shdr_shstrtab;
@@ -238,9 +296,11 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     };
     Elf32_Sym* symbols = malloc(sizeof(Elf32_Sym) * (1 + sm_size(&bin->labels)));
     symbols[0] = SYM_UNDEF;
+    struct string_map symbol_idxs = sm_make();
     struct elf_create_symtab_context symtab_ctx = {
         .buf = symbols,
         .idx = 1,
+        .sym_offsets = &symbol_idxs,
         .section_idxs = &unrolled.unroll_lookup,
         .symbols = &bin->labels,
         .last_local = 0
@@ -251,6 +311,19 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     section_headers[3] = shdr_symtab;
 
     free(symbols);
+
+    
+    // === Binary and relocation sections ===
+    struct elf_create_section_context main_ctx = {
+        .f = f,
+        .symtab_idx = 3,
+        .section_map = &bin->sections,
+        .rel_section_map = &rel_offset_map,
+        .sym_offsets = &symbol_idxs,
+        .header_buf = section_headers,
+        .section_idx = 4
+    };
+    sm_foreach(&bin->sections, elf_create_section, &main_ctx);
 
     // Finish by writing section headers
     Elf32_Word shoff = ftell(f);
