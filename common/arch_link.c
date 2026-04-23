@@ -137,7 +137,7 @@ static void link_file_iter(void* ctx, const char* name, void* value) {
     link_section(context->labels, section, context->section_offsets);
 }
 
-void link_file(struct asm_result* binfile, const struct string_map* section_offsets) {
+void link_file(struct bin_file* binfile, const struct string_map* section_offsets) {
     struct link_file_iter_context ctx = {
         .labels = &binfile->labels,
         .section_offsets = section_offsets

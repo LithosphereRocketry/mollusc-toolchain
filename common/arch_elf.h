@@ -13,6 +13,8 @@
 
 // String map of struct bin_section
 // Retuns 0 on success, error code on failure
-int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type);
+int elf_write(FILE* f, const struct bin_file* bin, Elf32_Half type);
+
+struct bin_file elf_read(FILE* f);
 
 #endif

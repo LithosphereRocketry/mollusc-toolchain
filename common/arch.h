@@ -105,12 +105,12 @@ struct bin_section {
     arch_word_t* data;
 };
 
-struct asm_result {
+struct bin_file {
     struct string_map labels; // struct bin_label*
     struct string_map sections; // struct bin_section*
 };
 
-void destroy_assembly(struct asm_result* assem);
+void destroy_assembly(struct bin_file* assem);
 
 extern const char* arch_mnemonics[N_INSTRS];
 extern const arch_word_t arch_basebits[N_INSTRS];

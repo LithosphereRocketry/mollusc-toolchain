@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     struct parse_result parsed = asm_parse(filetext, filename);
     free(filetext);
 
-    struct asm_result assembled = assemble(&parsed);
+    struct bin_file assembled = assemble(&parsed);
 
     const char* outname = "a.out";
     if(arg_out.result.value) outname = arg_out.result.value;

@@ -99,7 +99,7 @@ static void destroy_asm_section(void* global, const char* name, void* value) {
     res->data_sz = 0;
 }
 
-void destroy_assembly(struct asm_result* assem) {
+void destroy_assembly(struct bin_file* assem) {
     sm_foreach(&assem->sections, destroy_asm_section, NULL);
     sm_destroy(&assem->sections);
     sm_destroy(&assem->labels);

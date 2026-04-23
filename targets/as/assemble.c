@@ -273,7 +273,7 @@ struct bin_section assemble_section(struct string_map* labels, const struct pars
 }
 
 static void assemble_section_iter(void* global, const char* name, void* value) {
-    struct asm_result* context = global;
+    struct bin_file* context = global;
     struct parse_section* section = value;
 
     // At this point, also add a label representing the start of the section
@@ -284,8 +284,8 @@ static void assemble_section_iter(void* global, const char* name, void* value) {
     sm_put(&context->sections, name, res, true);
 }
 
-struct asm_result assemble(const struct parse_result* parse) {
-    struct asm_result res = {
+struct bin_file assemble(const struct parse_result* parse) {
+    struct bin_file res = {
         .labels = sm_make(),
         .sections = sm_make()
     };

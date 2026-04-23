@@ -158,7 +158,7 @@ static void elf_create_section(void* ctx, const char* name, void* value) {
     context->section_idx ++;    
 }
 
-int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
+int elf_write(FILE* f, const struct bin_file* bin, Elf32_Half type) {
     if(type != ET_REL) {
         fprintf(stderr, "ELF type %i not supported\n", type);
         exit(1);
@@ -334,4 +334,48 @@ int elf_write(FILE* f, const struct asm_result* bin, Elf32_Half type) {
     free(section_headers);
     free(unrolled.sections);
     return 0;
+}
+
+struct bin_file elf_read(FILE* f) {
+    struct bin_file out = {
+        .labels = sm_make(),
+        .sections = sm_make()
+    };
+
+    Elf32_Ehdr header;
+    fread(&header, sizeof(struct bin_file), 1, f);
+
+    Elf32_Shdr* section_headers = malloc(sizeof(Elf32_Shdr) * header.e_shnum);
+    fseek(f, header.e_shoff, SEEK_SET);
+    fread(section_headers, header.e_shnum, sizeof(Elf32_Shdr), f);
+
+    // Probably wasteful to just load all the sections into memory, but it's
+    // fine for now
+    void** section_contents = malloc(header.e_shnum * sizeof(void*));
+    for(size_t i = 0; i < header.e_shnum; i++) {
+        if(section_headers[i].sh_size > 0) {
+            section_contents[i] = malloc(section_headers[i].sh_size);
+            fseek(f, section_headers[i].sh_offset, SEEK_SET);
+            fread(section_contents[i], 1, section_headers[i].sh_size, f);
+        } else {
+            section_contents[i] = NULL;
+        }
+    }
+
+    char* shstrtab = section_contents[header.e_shstrndx];
+
+    for(size_t i = 0; i < header.e_shnum; i++) {
+        if(section_headers[i].sh_type == SHT_PROGBITS) {
+            if(sm_haskey(&out.sections, shstrtab + section_headers[i].sh_name)) {
+                
+            }
+        }
+    }
+
+
+    for(size_t i = 0; i < header.e_shnum; i++) {
+        if(section_contents[i]) free(section_contents[i]);
+    }
+    free(section_contents);
+    free(section_headers);
 }

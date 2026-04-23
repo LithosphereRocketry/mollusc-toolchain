@@ -6,6 +6,6 @@
                     // struct bin_label*
 void link_section(struct string_map* labels, struct bin_section* section, const struct string_map* section_offsets);
 
-void link_file(struct asm_result* binfile, const struct string_map* section_offsets);
+void link_file(struct bin_file* binfile, const struct string_map* section_offsets);
 
 #endif
