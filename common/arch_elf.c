@@ -337,6 +337,21 @@ int elf_write(FILE* f, const struct bin_file* bin, Elf32_Half type) {
     return 0;
 }
 
+static struct bin_section* ensure_section(struct bin_file* bin, const char* name) {
+    if(!sm_haskey(&bin->sections, name)) {
+        struct bin_section* section = malloc(sizeof(struct bin_section));
+        section->data = NULL;
+        section->data_sz = 0;
+        // hugely wasteful dup, but who cares for now
+        section->name = strcpy_dup(name);
+        section->relocations = hl_make();
+        sm_put(&bin->sections, name, section, true);
+        return section;
+    } else {
+        return sm_get(&bin->sections, name);
+    }
+}
+
 struct bin_file elf_read(FILE* f) {
     struct bin_file out = {
         .labels = sm_make(),
@@ -344,7 +359,7 @@ struct bin_file elf_read(FILE* f) {
     };
 
     Elf32_Ehdr header;
-    fread(&header, sizeof(struct bin_file), 1, f);
+    fread(&header, sizeof(Elf32_Ehdr), 1, f);
 
     Elf32_Shdr* section_headers = malloc(sizeof(Elf32_Shdr) * header.e_shnum);
     fseek(f, header.e_shoff, SEEK_SET);
@@ -367,13 +382,29 @@ struct bin_file elf_read(FILE* f) {
 
     for(size_t i = 0; i < header.e_shnum; i++) {
         if(section_headers[i].sh_type == SHT_PROGBITS) {
-            struct bin_section* section;
-            if(!sm_haskey(&out.sections, shstrtab + section_headers[i].sh_name)) {
-                section = malloc(sizeof(struct bin_section));
-                section->data = NULL;
-                section->data_sz = 0;
-                section->name = strcpy_dup(shstrtab + section_headers[i].sh_name);
-                section->relocations = hl_make();
+            const char* name = shstrtab + section_headers[i].sh_name;
+            struct bin_section* section = ensure_section(&out, name);
+            section->data = section_contents[i];
+            section_contents[i] = NULL;
+            section->data_sz = section_headers[i].sh_size;
+        } else if(section_headers[i].sh_type == SHT_REL) {
+            Elf32_Rel* rels = section_contents[i];
+
+            size_t target_section_index = section_headers[i].sh_info;
+            size_t symtab_index = section_headers[i].sh_link;
+            
+            Elf32_Sym* syms = section_contents[symtab_index];
+            size_t strtab_index = section_headers[symtab_index].sh_link;
+            const char* strtab = section_contents[strtab_index];
+            
+            const char* name = shstrtab + section_headers[target_section_index].sh_name;
+            struct bin_section* section = ensure_section(&out, name);
+            for(size_t i = 0; i < section_headers[i].sh_size / sizeof(Elf32_Rel); i++) {
+                struct relocation* rel = malloc(sizeof(struct relocation));
+                rel->symbol = strcpy_dup(strtab + ELF32_R_SYM(rels[i].r_info));
+                rel->type = ELF32_R_TYPE(rels[i].r_info);
+                rel->offset = rels[i].r_offset;
+                hl_append(&section->relocations, rel);
             }
         }
     }
