@@ -4,6 +4,7 @@
 #include <string.h>
 #include "arch.h"
 #include "misctools.h"
+#include "strtools.h"
 
 static const Elf32_Shdr SHDR_UNDEF = {
     .sh_name = 0,
@@ -366,8 +367,13 @@ struct bin_file elf_read(FILE* f) {
 
     for(size_t i = 0; i < header.e_shnum; i++) {
         if(section_headers[i].sh_type == SHT_PROGBITS) {
-            if(sm_haskey(&out.sections, shstrtab + section_headers[i].sh_name)) {
-                
+            struct bin_section* section;
+            if(!sm_haskey(&out.sections, shstrtab + section_headers[i].sh_name)) {
+                section = malloc(sizeof(struct bin_section));
+                section->data = NULL;
+                section->data_sz = 0;
+                section->name = strcpy_dup(shstrtab + section_headers[i].sh_name);
+                section->relocations = hl_make();
             }
         }
     }
@@ -378,4 +384,6 @@ struct bin_file elf_read(FILE* f) {
     }
     free(section_contents);
     free(section_headers);
+
+    return out;
 }
