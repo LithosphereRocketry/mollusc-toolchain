@@ -1,6 +1,9 @@
 #include "arch.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+
+#include "arch_disasm.h"
 
 const char* arch_mnemonics[] = {
     [I_INVALID]="[invalid]",
@@ -83,8 +86,44 @@ const char* arch_mmnames[] = {
 };
 
 const char* arch_relocnames[] = {
-    [RELOC_J_REL] = "RELOC_J_REL"
+    [RELOC_J_REL] = "RELOC_J_REL",
+    [RELOC_LUR_REL] = "RELOC_LUR_REL",
+    [RELOC_IMM_REL] = "RELOC_IMM_REL"
 };
+
+struct print_asm_context {
+    FILE* f;
+};
+static void print_asm_section(void* global, const char* name, void* value) {
+    FILE* f = global;
+    const struct bin_section* section = value;
+    fprintf(f, "SECTION %s\n", name);
+    fprintf(f, "RELOCATIONS\n");
+    for(size_t i = 0; i < section->relocations.len; i++) {
+        struct relocation* rel = section->relocations.buf[i];
+        fprintf(f, "\toffset 0x%zx,\"%s\",type %s\n",
+                rel->offset, rel->symbol, arch_relocnames[rel->type]);
+    }
+    fprintf(f, "CODE\n");
+    for(size_t i = 0; i < section->data_sz; i++) {
+        static char disasm_buf[64];
+        arch_disasm(disasm_buf, 64, &section->data[i]);
+        fprintf(f, "\t%08x\t%s\n", section->data[i], disasm_buf);
+    }
+}
+static void print_label(void* global, const char* name, void* value) {
+    FILE* f = global;
+    struct bin_label* label = value;
+    fprintf(f, "\t%s -> %s+%zx\n", name, label->section, label->offset);
+}
+void print_assembly(struct bin_file* assem) {
+    // TODO: is it better for these functions to print to stdout or to file?
+    FILE* f = stdout;
+    fprintf(f, "SYMBOLS\n");
+    sm_foreach(&assem->labels, print_label, f);
+    sm_foreach(&assem->sections, print_asm_section, f);
+}
+
 
 static void destroy_asm_section(void* global, const char* name, void* value) {
     (void) global, (void) name;

@@ -110,6 +110,8 @@ struct bin_file {
     struct string_map sections; // struct bin_section*
 };
 
+void print_assembly(struct bin_file* assem);
+
 void destroy_assembly(struct bin_file* assem);
 
 extern const char* arch_mnemonics[N_INSTRS];

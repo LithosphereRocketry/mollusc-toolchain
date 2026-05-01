@@ -386,7 +386,7 @@ struct bin_file elf_read(FILE* f) {
             struct bin_section* section = ensure_section(&out, name);
             section->data = section_contents[i];
             section_contents[i] = NULL;
-            section->data_sz = section_headers[i].sh_size;
+            section->data_sz = section_headers[i].sh_size / sizeof(arch_word_t);
         } else if(section_headers[i].sh_type == SHT_REL) {
             Elf32_Rel* rels = section_contents[i];
 
@@ -399,11 +399,12 @@ struct bin_file elf_read(FILE* f) {
             
             const char* name = shstrtab + section_headers[target_section_index].sh_name;
             struct bin_section* section = ensure_section(&out, name);
-            for(size_t i = 0; i < section_headers[i].sh_size / sizeof(Elf32_Rel); i++) {
+            for(size_t j = 0; j < section_headers[i].sh_size / sizeof(Elf32_Rel); j++) {
                 struct relocation* rel = malloc(sizeof(struct relocation));
-                rel->symbol = strcpy_dup(strtab + ELF32_R_SYM(rels[i].r_info));
-                rel->type = ELF32_R_TYPE(rels[i].r_info);
-                rel->offset = rels[i].r_offset;
+                Elf32_Sym* symbol = syms + ELF32_R_SYM(rels[j].r_info);
+                rel->symbol = strcpy_dup(strtab + symbol->st_name);
+                rel->type = ELF32_R_TYPE(rels[j].r_info);
+                rel->offset = rels[j].r_offset;
                 hl_append(&section->relocations, rel);
             }
         }
