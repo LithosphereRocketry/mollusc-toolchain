@@ -29,6 +29,10 @@ getsrcs = $(wildcard $(1)/*.c) $(call getgensrcs,$(1))
 getobjs = $(patsubst %.c,%.o,$(call getsrcs,$(1)))
 gettgtobjs = $(call getobjs,$(COMMON_DIR)) $(call getobjs,$(TARGET_DIR)/$(1))
 
+getasms = $(wildcard $(1)/*.S)
+getasmobjs = $(patsubst %.S,%.o,$(call getasms,$(1)))
+gettestasmobjs = $(call getasmobjs,$(TEST_EMU_DIR)) $(call getasmobjs,$(TEST_EMU_DIR)/$(1))
+
 GENSRCS = $(call getgensrcs,$(COMMON_DIR)) $(foreach t,$(TARGET_DIRS),$(call getgensrcs,$(t)))
 OBJS = $(call getobjs,$(COMMON_DIR)) $(foreach t,$(TARGET_DIRS),$(call getobjs,$(t)))
 DEPS = $(OBJS:.o=.d)
