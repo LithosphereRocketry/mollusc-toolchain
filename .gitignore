@@ -1,6 +1,7 @@
 .vscode/
 out/
 test_out/
+compile_commands.json
 
 # preprocessed asm
 *.s

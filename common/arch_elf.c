@@ -1,10 +1,12 @@
 #include "arch_elf.h"
 
+#include <elf.h>
 #include <stdlib.h>
 #include <string.h>
 #include "arch.h"
 #include "misctools.h"
 #include "strtools.h"
+#include "structures.h"
 
 static const Elf32_Shdr SHDR_UNDEF = {
     .sh_name = 0,
@@ -406,6 +408,27 @@ struct bin_file elf_read(FILE* f) {
                 rel->type = ELF32_R_TYPE(rels[j].r_info);
                 rel->offset = rels[j].r_offset;
                 hl_append(&section->relocations, rel);
+            }
+        } else if(section_headers[i].sh_type == SHT_SYMTAB) {
+            // We know the first symbol is null, so skip it
+            for(size_t j = 1; j < section_headers[i].sh_size / sizeof(Elf32_Sym); j++) {
+                Elf32_Sym* sym = ((Elf32_Sym*) section_contents[i]) + j;
+                struct bin_label* lbl = malloc(sizeof(struct bin_label));
+                const char* name = section_contents[section_headers[i].sh_link] + sym->st_name;
+                lbl->offset = sym->st_value;
+                lbl->flags = 0;
+                if(sym->st_shndx == SHN_ABS) {
+                    lbl->section = NULL;
+                } else if(sym->st_shndx == SHN_UNDEF) {
+                    lbl->section = NULL;
+                    lbl->flags |= BL_UNDEF;
+                } else {
+                    Elf32_Shdr* hdr = section_headers + sym->st_shndx;
+                    lbl->section = strcpy_dup(shstrtab + hdr->sh_name);
+                }
+                if(ELF32_ST_BIND(sym->st_info) == STB_GLOBAL) lbl->flags |= BL_EXPORTED;
+                if(ELF32_ST_TYPE(sym->st_info) == STT_SECTION) lbl->flags |= BL_SECTION;
+                sm_put(&out.labels, name, lbl, true);
             }
         }
     }
