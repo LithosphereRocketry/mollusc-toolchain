@@ -17,7 +17,6 @@ struct parse_instr {
 
 struct parse_section {
     const char* name;
-    struct heap_list globals; // char*
     struct heap_list instrs; // struct parse_instr*
     struct string_map instr_labels; // size_t
 };
@@ -25,6 +24,7 @@ struct parse_section {
 struct parse_result {
     struct heap_list filenames; // used to manage lifetime of filename strings
     struct string_map sections;
+    struct heap_list globals;
 };
 
 struct parse_result asm_parse(const char* text, const char* filename);

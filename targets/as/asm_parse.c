@@ -10,6 +10,7 @@
 #include "asm_common.h"
 #include "asm_instrs.h"
 #include "arch.h"
+#include "structures.h"
 
 static void parse_err(const char* msg, const char* filename, const char* text, size_t lineno) {
     fprintf(stderr, "Error at %s line %zu: %s\n> %.*s\n",
@@ -25,7 +26,6 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
 
     // fill in the actual section fields
     new_section->name = name; // todo: lifetime?
-    new_section->globals = hl_make();
     new_section->instrs = hl_make();
     new_section->instr_labels = sm_make();
 
@@ -36,7 +36,8 @@ static struct parse_section* add_section(struct parse_result* res, const char* n
 struct parse_result asm_parse(const char* text, const char* filename) {
     struct parse_result result = {
         .filenames = hl_make(),
-        .sections = sm_make()
+        .sections = sm_make(),
+        .globals = hl_make()
     };
     // mildly hacky to avoid double free
     char* fn = strcpy_dup(filename);
@@ -86,10 +87,6 @@ struct parse_result asm_parse(const char* text, const char* filename) {
             text = end_name;
             line_full = true;
         } else if((nextpos = startswith(".global", text))) {
-            if(!current_section) {
-                parse_err("No section active", fn, text, lineno);
-                exit(-1);
-            }
             char* name;
             const char* end_name = parse_name(nextpos, &name);
             if(!end_name) {
@@ -97,7 +94,7 @@ struct parse_result asm_parse(const char* text, const char* filename) {
                         fn, text, lineno);
                 exit(-1);
             }
-            hl_append(&current_section->globals, name);
+            hl_append(&result.globals, name);
             text = end_name;
             line_full = true;
         } else if((nextpos = strnchr(text, ':', eol(text)-text))) {
@@ -131,10 +128,7 @@ static void print_punned_addr(void* global, const char* key, void* value) {
 }
 
 void print_section(const struct parse_section* sect) {
-    printf("SECTION %s\nGLOBALS\n", sect->name);
-    for(size_t i = 0; i < sect->globals.len; i++) {
-        printf("\t%s\n", (char*) sect->globals.buf[i]);
-    }
+    printf("SECTION %s\n", sect->name);
     printf("INSTRUCTION LABELS\n");
     sm_foreach(&sect->instr_labels, print_punned_addr, NULL);
     printf("INSTRUCTIONS\n");
@@ -167,7 +161,6 @@ static void destroy_parse_section(void* global, const char* key, void* value) {
     struct parse_section* s = value;
     (void) global; (void) key;
     free((char*) s->name);
-    hl_destroy(&s->globals, true);
     for(size_t i = 0; i < s->instrs.len; i++) {
         struct parse_instr* instr = s->instrs.buf[i];
         if(instr->pred) free((char*) instr->pred);
@@ -183,4 +176,5 @@ void destroy_parse(struct parse_result* res) {
     sm_foreach(&res->sections, destroy_parse_section, NULL);
     sm_destroy(&res->sections);
     hl_destroy(&res->filenames, true);
+    hl_destroy(&res->globals, true);
 }

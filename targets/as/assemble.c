@@ -1,5 +1,6 @@
 #include "assemble.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -250,22 +251,6 @@ struct bin_section assemble_section(struct string_map* labels, const struct pars
     sm_foreach(&parse->instr_labels, transfer_asm_label, &transfer_info);
     free(instr_offsets);
 
-    for(size_t i = 0; i < parse->globals.len; i++) {
-        const char* glb = parse->globals.buf[i];
-        struct bin_label* lbl = sm_get(labels, glb);
-        if(lbl) {
-            lbl->flags |= BL_EXPORTED;
-        } else {
-            // If the label doesn't exist, make a dummy entry for it that can
-            // be filled in later
-            lbl = malloc(sizeof(struct bin_label));
-            lbl->section = NULL;
-            lbl->offset = 0;
-            lbl->flags = BL_EXPORTED | BL_UNDEF;
-            sm_put(labels, glb, lbl, true);
-        }
-    }
-
     res.data_sz = offset_word;
     if(res.data) res.data = realloc(res.data, res.data_sz * sizeof(arch_word_t));
     link_section(labels, &res, NULL);
@@ -290,21 +275,20 @@ struct bin_file assemble(const struct parse_result* parse) {
         .sections = sm_make()
     };
     sm_foreach(&parse->sections, assemble_section_iter, &res);
+    for(size_t i = 0; i < parse->globals.len; i++) {
+        const char* glb = parse->globals.buf[i];
+        struct bin_label* lbl = sm_get(&res.labels, glb);
+        if(lbl) {
+            lbl->flags |= BL_EXPORTED;
+        } else {
+            // If the label doesn't exist, make a dummy entry for it that can
+            // be filled in later
+            lbl = malloc(sizeof(struct bin_label));
+            lbl->section = NULL;
+            lbl->offset = 0;
+            lbl->flags = BL_EXPORTED | BL_UNDEF;
+            sm_put(&res.labels, glb, lbl, true);
+        }
+    }
     return res;
 }
-
-static const char* rel_enum_names[] = {
-    [RELOC_J_REL] = "RELOC_J_REL"
-};
-
-// void print_assembly(const struct bin_section* res) {
-//     printf("RELOCATIONS\n");
-//     for(size_t i = 0; i < res->relocations.len; i++) {
-//         struct relocation* reloc = res->relocations.buf[i];
-//         printf("\t%s %s %zu\n", rel_enum_names[reloc->type], reloc->symbol, reloc->offset);
-//     }
-//     printf("BINARY\n");
-//     for(size_t i = 0; i < res->data_sz; i++) {
-//         printf("\t%0*x\n", (int) sizeof(arch_word_t)*2, res->data[i]);
-//     }
-// }

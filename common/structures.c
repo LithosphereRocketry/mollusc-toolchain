@@ -173,6 +173,12 @@ void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap
     sm->_count ++;
 }
 
+void sm_mark_heap(struct string_map* sm, const char* key, bool value_heap) {
+    struct string_map_entry* entry = sm_getent(sm, key);
+    if(entry) entry->value_heap = value_heap;
+}
+
+
 static void sm_destroy_ent(struct string_map_entry* e) {
     if(e) {
         if(e->value_heap) free(e->value);

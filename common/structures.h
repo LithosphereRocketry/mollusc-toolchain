@@ -58,6 +58,16 @@ void* sm_get(const struct string_map* sm, const char* key);
  */
 void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap);
 
+/**
+ * Mark the value associated with the given key as heap-allocated or not heap-
+ * allocated. Useful for functions that move items by pointer in or out of the
+ * mapping to transfer ownership.
+ */
+void sm_mark_heap(struct string_map* sm, const char* key, bool value_heap);
+
+/**
+ * Remove the value associated with the provided key from the mapping.
+ */
 void sm_remove(struct string_map* sm, const char* key);
 
 /**

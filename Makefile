@@ -43,6 +43,7 @@ ASSEMBLY_EXS = $(wildcard $(EXAMPLE_DIR)/*.S)
 ASSEMBLY_EXS_PREPROCESS = $(ASSEMBLY_EXS:.S=.s)
 
 EMU_TEST_DIRS = $(filter-out $(TEST_EMU_SUPPORT),$(wildcard $(TEST_EMU_DIR)/*))
+EMU_TEST_OBJS = $(call getasmobjs,$(COMMON_DIR)) $(foreach t,$(EMU_TEST_DIRS),$(call getasmobjs,$(t)))
 EMU_TESTS = $(EMU_TEST_DIRS:$(TEST_EMU_DIR)/%=test_emu_%)
 .PHONY: $(EMU_TESTS)
 
@@ -86,8 +87,9 @@ $(EMU_TESTS): test_emu_%: $(TEST_EMU_OUT_DIR)/%_out.bin $(TEST_EMU_OUT_DIR)/%_ve
 
 # Temporary until linker works
 .PRECIOUS: $(TEST_EMU_OUT_DIR)/%_rom.bin
-$(TEST_EMU_OUT_DIR)/%_rom.bin: $(TEST_EMU_DIR)/%/main.s out/as | $(TEST_EMU_OUT_DIR)
-	out/as $< -B -o $@
+.SECONDEXPANSION:
+$(TEST_EMU_OUT_DIR)/%_rom.bin: out/ld $$(call gettestasmobjs,$$*) | $(TEST_EMU_OUT_DIR)
+	out/ld -b binary -o $@ $(filter %.o,$^)
 
 $(TEST_EMU_OUT_DIR)/%_verify.bin: $(TEST_EMU_DIR)/%/reference.py | $(TEST_EMU_OUT_DIR)
 	python3 $< > $@
@@ -96,6 +98,6 @@ $(DIRS): %:
 	mkdir -p $@
 
 clean:
-	rm -rf $(DEPS) $(OBJS) $(GENSRCS) $(ASSEMBLY_EXS_PREPROCESS) $(OUT_DIR) $(TEST_OUT_DIR)
+	rm -rf $(DEPS) $(OBJS) $(EMU_TEST_OBJS) $(GENSRCS) $(ASSEMBLY_EXS_PREPROCESS) $(OUT_DIR) $(TEST_OUT_DIR)
 
 -include $(DEPS)
