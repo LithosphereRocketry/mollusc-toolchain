@@ -108,7 +108,7 @@ static void print_asm_section(void* global, const char* name, void* value) {
     for(size_t i = 0; i < section->data_sz; i++) {
         static char disasm_buf[64];
         arch_disasm(disasm_buf, 64, &section->data[i]);
-        fprintf(f, "\t%08x\t%s\n", section->data[i], disasm_buf);
+        fprintf(f, "   %08lx:\t%08x\t%s\n", i*sizeof(arch_word_t), section->data[i], disasm_buf);
     }
 }
 static void print_label(void* global, const char* name, void* value) {

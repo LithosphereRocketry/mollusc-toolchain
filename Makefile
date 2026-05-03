@@ -10,7 +10,7 @@ EXAMPLE_DIR = examples
 TEST_DIR = tests
 TEST_EMU_DIR = $(TEST_DIR)/emu
 # Support files to be ignored when scanning for tests
-TEST_EMU_SUPPORT = $(TEST_EMU_DIR)/platform.inc $(TEST_EMU_DIR)/.gitignore
+TEST_EMU_SUPPORT = platform.inc platform.S platform.s platform.o
 
 TEST_EMU_MAX_CYCLES = 100000
 
@@ -41,9 +41,11 @@ TARGETS = $(TARGET_DIRS:$(TARGET_DIR)/%=$(OUT_DIR)/%)
 
 ASSEMBLY_EXS = $(wildcard $(EXAMPLE_DIR)/*.S)
 ASSEMBLY_EXS_PREPROCESS = $(ASSEMBLY_EXS:.S=.s)
-
-EMU_TEST_DIRS = $(filter-out $(TEST_EMU_SUPPORT),$(wildcard $(TEST_EMU_DIR)/*))
-EMU_TEST_OBJS = $(call getasmobjs,$(COMMON_DIR)) $(foreach t,$(EMU_TEST_DIRS),$(call getasmobjs,$(t)))
+EMU_SUPPORT_PATHS = $(TEST_EMU_SUPPORT:%=$(TEST_EMU_DIR)/%)
+$(info EMU_SUPPORT_PATHS is $(EMU_SUPPORT_PATHS))
+EMU_TEST_DIRS = $(filter-out $(EMU_SUPPORT_PATHS),$(wildcard $(TEST_EMU_DIR)/*))
+$(info $(EMU_TEST_DIRS))
+EMU_TEST_OBJS = $(call getasmobjs,$(TEST_EMU_DIR)) $(foreach t,$(EMU_TEST_DIRS),$(call getasmobjs,$(t)))
 EMU_TESTS = $(EMU_TEST_DIRS:$(TEST_EMU_DIR)/%=test_emu_%)
 .PHONY: $(EMU_TESTS)
 
