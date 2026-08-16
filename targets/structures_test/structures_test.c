@@ -31,4 +31,9 @@ int main(int argc, char** argv) {
     sm_print(&map);
 
     sm_destroy(&map);
+
+    map = sm_make();
+    sm_put(&map, "c", NULL, false);
+    sm_put(&map, "c", (void*) 0x1234, false);
+    printf("%p\n", sm_get(&map, "c"));
 }

@@ -9,6 +9,8 @@ compile_commands.json
 # lex/yacc
 *.yy.c
 *.tab.c
+*.tab.h
+*.output
 
 # Prerequisites
 *.d

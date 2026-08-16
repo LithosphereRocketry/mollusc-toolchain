@@ -140,6 +140,12 @@ static void sm_expand(struct string_map* sm) {
 }
 
 void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap) {
+    struct string_map_entry* newent;
+    if((newent = sm_getent(sm, key))) {
+        if(newent->value_heap) free(newent->value);
+        newent->value = value;
+        newent->value_heap = value_heap;
+    }
     // very crude load factor of 1 saves us from doing floating point
     if(sm->_count >= sm->_entries) {
         sm_expand(sm);
@@ -147,7 +153,7 @@ void sm_put(struct string_map* sm, const char* key, void* value, bool value_heap
 
     uint32_t hash = sm_hash(key);
 
-    struct string_map_entry* newent = malloc(sizeof(struct string_map_entry));
+    newent = malloc(sizeof(struct string_map_entry));
     // make sure our key can outlive the key we get passed
     if(!sm->_key_buffer) {
         sm->_key_buffer = malloc(sizeof(char)*KEY_BUFFER_PREALLOC);

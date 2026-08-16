@@ -22,6 +22,13 @@ const char* eow(const char* str);
 const char* startswith(const char* pattern, const char* str);
 
 /**
+ * If str ends with exactly pattern, return a pointer to the first character of
+ * pattern in str, otherwise return null. Must be given valid null-terminated
+ * strings.
+ */
+ const char* endswith(const char* pattern, const char* str);
+
+/**
  * Platform-independent implementation of Linux's strnchr. Finds a character
  * in a null-terminated string, looking at at most n characters.
  */
@@ -47,5 +54,11 @@ char *strcpy_dup(const char *str);
  * variable; ensures null termination
  */
 char* strncpy_dup(const char* str, size_t n);
+
+/**
+ * Calls tolower() on each character of src and places the result in dest. src
+ * and dest may be the same string. Always null terminates.
+ */
+void strtolower(const char* src, char* dest);
 
 #endif

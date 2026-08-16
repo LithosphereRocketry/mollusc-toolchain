@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 const char* eol(const char* str) {
     while(*str != '\0' && *str != '\n') str++;
@@ -20,6 +21,17 @@ const char* startswith(const char* pattern, const char* str) {
         return str + patlen;
     } else {
         return NULL;
+    }
+}
+
+const char* endswith(const char* pattern, const char* str) {
+    const char* strptr = str + strlen(str);
+    const char* patptr = pattern + strlen(pattern);
+    while(1) {
+        if(*strptr != *patptr) return NULL;
+        if(patptr == pattern) return strptr;
+        strptr--;
+        patptr--;
     }
 }
 
@@ -58,4 +70,13 @@ char *strncpy_dup(const char *str, size_t n) {
     memcpy(result, str, slen);
     result[slen] = '\0';
     return result;
+}
+
+void strtolower(const char* src, char* dest) {
+    while(1) {
+        *dest = tolower(*src);
+        dest++;
+        src++;
+        if(*src == '\0') break;
+    }
 }
